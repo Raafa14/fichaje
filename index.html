@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GastroTime - Control Horario de Restaurante</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- VISTA 1: ACCESO / REGISTRO DEL RESTAURANTE -->
+  <div id="auth-view" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="brand-icon">🍴</div>
+        <h1>GastroTime</h1>
+        <p>Control Horario y Fichaje de Restaurante</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+        <button type="button" id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">Registrar Restaurante</button>
+      </div>
+
+      <!-- Formulario Iniciar Sesión -->
+      <form id="login-form" class="auth-body" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-name">Nombre del Restaurante / Local</label>
+          <input type="text" id="login-name" placeholder="Ej. Restaurante El Mirador" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" placeholder="••••••••" required>
+        </div>
+        <p id="login-error" class="error-text hidden"></p>
+        <button type="submit" class="btn btn-primary btn-full">Entrar al Terminal</button>
+      </form>
+
+      <!-- Formulario Registrar Restaurante -->
+      <form id="register-form" class="auth-body hidden" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label for="reg-name">Nombre del Restaurante / Local</label>
+          <input type="text" id="reg-name" placeholder="Ej. Restaurante El Mirador" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Crea una Contraseña</label>
+          <input type="password" id="reg-password" placeholder="Mínimo 4 caracteres" minlength="4" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password-confirm">Repite la Contraseña</label>
+          <input type="password" id="reg-password-confirm" placeholder="Repite la contraseña" minlength="4" required>
+        </div>
+        <p id="register-error" class="error-text hidden"></p>
+        <button type="submit" class="btn btn-accent btn-full">Registrar y Abrir Local</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- VISTA 2: APLICACIÓN PRINCIPAL -->
+  <div id="app-view" class="hidden">
+    <!-- Barra de Navegación Superior -->
+    <header class="topbar no-print">
+      <div class="topbar-left">
+        <span class="brand-badge">🍴 GastroTime</span>
+        <h2 id="header-restaurant-name">Restaurante</h2>
+      </div>
+      <nav class="topbar-nav">
+        <button type="button" id="nav-terminal" class="nav-btn active" onclick="showTerminalView()">
+          ⏱ Terminal Fichaje
+        </button>
+        <button type="button" id="nav-admin" class="nav-btn" onclick="requestAdminAccess()">
+          🔒 Control Semanal (Admin)
+        </button>
+        <button type="button" class="nav-btn nav-logout" onclick="logoutRestaurant()">
+          Cerrar Sesión
+        </button>
+      </nav>
+    </header>
+
+    <!-- SUBVISTA A: TERMINAL PÚBLICO DE FICHAJE -->
+    <main id="terminal-section" class="container">
+      <section class="clock-banner">
+        <div>
+          <span class="pill-badge">● TERMINAL DE FICHAJE DEL PERSONAL</span>
+          <p id="live-date" class="live-date">Cargando fecha...</p>
+          <div id="live-clock" class="live-clock">00:00:00</div>
+        </div>
+        <div class="status-counters">
+          <div class="counter-box active-box">
+            <span id="count-working" class="counter-num">0</span>
+            <span class="counter-label">En turno</span>
+          </div>
+          <div class="counter-box">
+            <span id="count-off" class="counter-num">0</span>
+            <span class="counter-label">Fuera de turno</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h3>Pulsa tu tarjeta para fichar Entrada o Salida</h3>
+          <p>Toca sobre tu nombre para registrar tu hora exacta al instante.</p>
+        </div>
+        <div id="workers-grid" class="workers-grid">
+          <!-- Tarjetas generadas por JS -->
+        </div>
+      </section>
+    </main>
+
+    <!-- SUBVISTA B: CONTROL SEMANAL PROTEGIDO (ADMIN) -->
+    <main id="admin-section" class="container hidden">
+      <div class="admin-toolbar no-print">
+        <button type="button" class="btn btn-secondary" onclick="showTerminalView()">
+          ← Bloquear y Volver al Terminal
+        </button>
+        <div class="toolbar-actions">
+          <button type="button" class="btn btn-outline" onclick="openChangePinModal()">
+            🔑 Cambiar PIN Admin
+          </button>
+          <button type="button" class="btn btn-accent" onclick="window.print()">
+            🖨 Imprimir Informe Semanal (Domingo)
+          </button>
+        </div>
+      </div>
+
+      <!-- Añadir Nuevo Trabajador (Solo Nombre y Puesto: Terraza / Encargado) -->
+      <section class="card no-print">
+        <div class="card-header">
+          <h3>Añadir Nuevo Trabajador</h3>
+          <p>Introduce el nombre y el puesto para que aparezca en el terminal de fichaje y en la tabla semanal.</p>
+        </div>
+        <form class="add-worker-form" onsubmit="handleAddWorker(event)">
+          <div class="form-group">
+            <label for="worker-name">Nombre completo</label>
+            <input type="text" id="worker-name" placeholder="Ej. Sofía Morales" required>
+          </div>
+          <div class="form-group">
+            <label for="worker-role">Puesto</label>
+            <select id="worker-role" required>
+              <option value="Terraza">Terraza</option>
+              <option value="Encargado">Encargado</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-accent">+ Añadir</button>
+        </form>
+      </section>
+
+      <!-- Cuadrante Semanal Lunes a Domingo (Sin datos económicos) -->
+      <section class="card printable-area">
+        <div class="print-only-header">
+          <h1 id="print-restaurant-title">Restaurante</h1>
+          <p>Hoja de Control Horario Semanal (Lunes a Domingo) — Cierre de Semana</p>
+          <p id="print-week-range" class="print-dates"></p>
+        </div>
+
+        <div class="card-header no-print">
+          <h3>Cuadrante Semanal de Entradas, Salidas y Total de Horas</h3>
+          <p id="screen-week-range">Resumen semanal listo para imprimir el domingo.</p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>Lunes</th>
+                <th>Martes</th>
+                <th>Miércoles</th>
+                <th>Jueves</th>
+                <th>Viernes</th>
+                <th>Sábado</th>
+                <th>Domingo</th>
+                <th>Total Horas</th>
+                <th class="print-only-col">Firma Trabajador</th>
+                <th class="no-print">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="weekly-table-body">
+              <!-- Filas generadas por JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL 1: CONFIRMACIÓN DE FICHAJE -->
+  <div id="clock-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div id="clock-modal-badge" class="modal-badge">ENTRADA</div>
+      <h3 id="clock-modal-title">¿Estás seguro de que quieres entrar?</h3>
+      <p id="clock-modal-desc" class="modal-desc"></p>
+      <div id="clock-modal-time" class="modal-time-box">00:00</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeClockModal()">Cancelar</button>
+        <button type="button" id="clock-modal-confirm-btn" class="btn btn-primary" onclick="confirmClockAction()">
+          Sí, Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: CREAR / VERIFICAR / CAMBIAR PIN ADMIN -->
+  <div id="pin-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-badge badge-dark">🔒 CONTROL SEMANAL</div>
+      <h3 id="pin-modal-title">Introduce el PIN de Administrador</h3>
+      <p id="pin-modal-desc" class="modal-desc">Escribe tu PIN de 4 dígitos para acceder.</p>
+      <form onsubmit="handlePinSubmit(event)">
+        <input type="password" id="pin-input" class="pin-input" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••" required>
+        <p id="pin-error" class="error-text hidden"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closePinModal()">Cancelar</button>
+          <button type="submit" id="pin-submit-btn" class="btn btn-primary">Acceder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
