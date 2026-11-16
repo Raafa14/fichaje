@@ -89,13 +89,13 @@
       </div>
       <nav class="topbar-nav">
         <button type="button" id="nav-terminal" class="nav-btn active" onclick="showTerminalView()">
-          ⏱ Terminal Fichaje
+          <svg class="flat-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><polyline points="12 6 12 12 15 15"></polyline></svg>Terminal Fichaje
         </button>
         <button type="button" id="nav-admin" class="nav-btn" onclick="requestAdminAccess()">
-          🔒 Control Semanal (Admin)
+          <svg class="flat-svg-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>Control Semanal (Admin)
         </button>
         <button type="button" id="nav-settings" class="nav-btn nav-settings-btn" onclick="openSettingsModal()" title="Ajustes del Restaurante">
-          ⚙️ Ajustes
+          <svg class="flat-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Ajustes
         </button>
         <button type="button" class="nav-btn nav-logout" onclick="logoutRestaurant()">
           Cerrar Sesión
@@ -148,13 +148,13 @@
         </button>
         <div class="toolbar-actions">
           <button type="button" class="btn btn-outline" onclick="openSettingsModal()">
-            ⚙️ Ajustes del Local
+            <svg class="flat-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Ajustes del Local
           </button>
           <button type="button" class="btn btn-outline" onclick="openChangePinModal()">
-            🔑 Cambiar PIN Admin
+            <svg class="flat-svg-icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L11 9l1.5 1.5-1.5 1.5-1.5-1.5L8 12l2 2-6.5 6.5a2.12 2.12 0 0 1-3-3L7 11"></path><circle cx="16.5" cy="7.5" r="4.5"></circle></svg>Cambiar PIN Admin
           </button>
           <button type="button" class="btn btn-accent" onclick="window.print()">
-            🖨 Imprimir Informe Semanal (Domingo)
+            <svg class="flat-svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>Imprimir Informe Semanal
           </button>
         </div>
       </div>
@@ -204,13 +204,13 @@
               Semana Siguiente ▶
             </button>
             <button type="button" id="btn-delete-week" class="btn btn-danger-sm hidden" onclick="handleDeleteSelectedWeek()" title="Eliminar permanentemente el registro de esta semana de la base de datos">
-              🗑️ Borrar Semana
+              <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Borrar Semana
             </button>
           </div>
         </div>
         <div class="week-nav-subrow">
           <div class="history-select-wrap">
-            <label for="history-weeks-select">📂 Historial de semanas anteriores:</label>
+            <label for="history-weeks-select"><svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>Historial de semanas anteriores:</label>
             <select id="history-weeks-select" onchange="handleSelectHistoricalWeek(this.value)">
               <option value="">Cargando semanas guardadas...</option>
             </select>
@@ -280,7 +280,9 @@
   <!-- MODAL 2: CREAR / VERIFICAR / CAMBIAR PIN ADMIN -->
   <div id="pin-modal" class="modal-backdrop hidden">
     <div class="modal-card">
-      <div class="modal-badge badge-dark">🔒 CONTROL SEMANAL</div>
+      <div class="modal-badge badge-dark">
+        <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>CONTROL SEMANAL
+      </div>
       <h3 id="pin-modal-title">Introduce el PIN de Administrador</h3>
       <p id="pin-modal-desc" class="modal-desc">Escribe tu PIN de 4 dígitos para acceder.</p>
       <form onsubmit="handlePinSubmit(event)">
@@ -297,13 +299,17 @@
   <!-- MODAL 4: AJUSTES DEL RESTAURANTE Y AVISOS SMS -->
   <div id="settings-modal" class="modal-backdrop hidden">
     <div class="modal-card modal-card-large">
-      <div class="modal-badge badge-dark">⚙️ AJUSTES DEL LOCAL</div>
+      <div class="modal-badge badge-dark">
+        <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>AJUSTES DEL LOCAL
+      </div>
       <h3>Ajustes del Restaurante</h3>
       <p class="modal-desc">Cambia el nombre de tu empresa, ajusta la seguridad y configura los avisos SMS a las 23:59.</p>
 
       <form onsubmit="handleSaveSettings(event)" class="settings-form">
         <div class="settings-card-block">
-          <div class="settings-block-title">🏢 Identidad del Restaurante</div>
+          <div class="settings-block-title">
+            <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M3 7v14m18-14v14M6 7V3h12v4M9 11h2m-2 4h2m4-4h2m-4 4h2"></path></svg>Identidad del Restaurante
+          </div>
           <div class="form-group">
             <label for="settings-rest-name">Nombre del Restaurante / Local *</label>
             <input type="text" id="settings-rest-name" required placeholder="Ej. Restaurante El Mirador">
@@ -312,7 +318,9 @@
         </div>
 
         <div class="settings-card-block">
-          <div class="settings-block-title">🔒 Seguridad</div>
+          <div class="settings-block-title">
+            <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>Seguridad
+          </div>
           <div class="form-group">
             <label for="settings-admin-pin">PIN de Administrador (4 números)</label>
             <input type="password" id="settings-admin-pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••">
@@ -321,7 +329,9 @@
         </div>
 
         <div class="settings-card-block">
-          <div class="settings-block-title">⏰ Aviso SMS Nocturno a las 23:59h</div>
+          <div class="settings-block-title">
+            <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>Aviso SMS Nocturno a las 23:59h
+          </div>
           <p class="settings-info-p">
             Si un empleado ficha entrada y olvida fichar la salida, a las <strong>23:59h</strong> se detecta automáticamente y se le puede enviar un recordatorio SMS / WhatsApp a su móvil para que no se quede la jornada abierta.
           </p>

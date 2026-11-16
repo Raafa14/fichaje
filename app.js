@@ -27,6 +27,34 @@ function saveActiveSession(restaurantObj, isNewLogin = false) {
   localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
 }
 
+// --- ICONOS PLANOS Y MINIMALISTAS (SVG) ---
+const FLAT_PHONE_SVG = `<svg class="flat-svg-icon icon-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>`;
+const FLAT_TRASH_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+const FLAT_CHAT_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
+const FLAT_LOCK_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+
+// Deduplica trabajadores para evitar repeticiones por ID o Nombre+Puesto
+function deduplicateWorkers(workersList) {
+  if (!Array.isArray(workersList)) return [];
+  const seenIds = new Set();
+  const seenNames = new Set();
+  const result = [];
+
+  for (const w of workersList) {
+    if (!w || !w.id) continue;
+    const idKey = String(w.id);
+    const nameKey = `${(w.name || '').trim().toLowerCase()}_${(w.role || '').trim().toLowerCase()}`;
+
+    if (!seenIds.has(idKey) && !seenNames.has(nameKey)) {
+      seenIds.add(idKey);
+      seenNames.add(nameKey);
+      result.push(w);
+    }
+  }
+
+  return result;
+}
+
 const DAYS_OF_WEEK = [
   'Lunes',
   'Martes',
@@ -312,7 +340,7 @@ async function dbLoginRestaurant(name, password) {
   }
 }
 
-// 3. Cargar Trabajadores del Restaurante
+// 3. Cargar Trabajadores del Restaurante (con limpieza automática de duplicados)
 async function dbLoadWorkers(restaurantId) {
   if (isUsingFirebase()) {
     const db = getFirestoreDb();
@@ -324,12 +352,47 @@ async function dbLoadWorkers(restaurantId) {
       .get();
 
     const workers = [];
-    snap.forEach((doc) => workers.push(doc.data()));
-    return workers;
+    const seenKeys = new Map();
+    const duplicateIdsToDeactivate = [];
+
+    snap.forEach((doc) => {
+      const data = doc.data();
+      const worker = { ...data, id: data.id || doc.id };
+      const normKey = `${(worker.name || '').trim().toLowerCase()}_${(worker.role || '').trim().toLowerCase()}`;
+
+      if (seenKeys.has(normKey) || seenKeys.has(String(worker.id))) {
+        // Registro duplicado en la base de datos: marcar para desactivar
+        duplicateIdsToDeactivate.push(doc.id);
+      } else {
+        seenKeys.set(normKey, doc.id);
+        seenKeys.set(String(worker.id), doc.id);
+        workers.push(worker);
+      }
+    });
+
+    // Limpieza automática de duplicados en la base de datos
+    if (duplicateIdsToDeactivate.length > 0) {
+      duplicateIdsToDeactivate.forEach((dupId) => {
+        db.collection('restaurants')
+          .doc(restaurantId)
+          .collection('workers')
+          .doc(dupId)
+          .update({ active: false })
+          .catch((e) => console.warn('Error al desactivar duplicado:', e));
+      });
+    }
+
+    return deduplicateWorkers(workers);
   } else {
     const all = getLocalRestaurants();
     const rest = all[restaurantId];
-    return (rest && rest.workers) || [];
+    const raw = (rest && rest.workers) || [];
+    const clean = deduplicateWorkers(raw);
+    if (rest && raw.length !== clean.length) {
+      rest.workers = clean;
+      saveLocalRestaurants(all);
+    }
+    return clean;
   }
 }
 
@@ -769,8 +832,8 @@ function setupFirestoreListeners(restaurantId) {
     .onSnapshot(
       (snapshot) => {
         const updated = [];
-        snapshot.forEach((doc) => updated.push(doc.data()));
-        currentWorkers = updated;
+        snapshot.forEach((doc) => updated.push({ ...doc.data(), id: doc.data().id || doc.id }));
+        currentWorkers = deduplicateWorkers(updated);
         renderTerminalWorkers();
         if (!document.getElementById('admin-section').classList.contains('hidden')) {
           renderWeeklyTable();
@@ -1083,12 +1146,17 @@ function renderTerminalWorkers() {
   if (!grid) return;
   grid.innerHTML = '';
 
+  // Asegurar que la lista en memoria no tenga duplicados
+  currentWorkers = deduplicateWorkers(currentWorkers);
+
   if (currentWorkers.length === 0) {
     grid.innerHTML = `
       <div class="empty-workers-box">
-        <div class="empty-icon">👥</div>
+        <div class="empty-icon">
+          <svg class="flat-svg-icon" viewBox="0 0 24 24" width="36" height="36" stroke="#94a3b8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
         <h4>No hay trabajadores registrados todavía</h4>
-        <p>Entra en <strong>🔒 Control Semanal</strong> con tu PIN para añadir a tus empleados con su nombre, puesto y teléfono para avisos de salida.</p>
+        <p>Entra en <strong>Control Semanal</strong> con tu PIN para añadir a tus empleados con su nombre, puesto y teléfono para avisos de salida.</p>
       </div>
     `;
     const countWorkingEl = document.getElementById('count-working');
@@ -1117,7 +1185,7 @@ function renderTerminalWorkers() {
             <div class="worker-name">${worker.name}</div>
             <div class="worker-role">
               ${worker.role}
-              ${worker.phone ? `<span class="worker-phone-tag">· 📱 ${worker.phone}</span>` : ''}
+              ${worker.phone ? `<span class="worker-phone-tag">· ${FLAT_PHONE_SVG}${worker.phone}</span>` : ''}
             </div>
           </div>
         </div>
@@ -1369,13 +1437,13 @@ async function loadAndRenderSelectedWeek() {
 
   if (statusBadge) {
     if (isCurrentWeek) {
-      statusBadge.textContent = '🟢 Semana actual en curso';
+      statusBadge.innerHTML = '<span class="status-dot-pulse"></span> Semana actual en curso';
       statusBadge.className = 'badge-status-pill active';
     } else if (isPastWeek) {
-      statusBadge.textContent = '📁 Registro Histórico Guardado';
+      statusBadge.innerHTML = '<span class="status-dot-pulse historical"></span> Registro Histórico Guardado';
       statusBadge.className = 'badge-status-pill historical';
     } else {
-      statusBadge.textContent = '📅 Semana futura';
+      statusBadge.innerHTML = '<span class="status-dot-pulse" style="background:#94a3b8;"></span> Semana futura';
       statusBadge.className = 'badge-status-pill';
     }
   }
@@ -1586,7 +1654,7 @@ function renderWeeklyTable() {
     if (isPastWeek) {
       actionBtnHtml = `
         <button type="button" class="btn-danger-sm" onclick="handleClearWorkerWeekHours('${id}')" title="Borrar horas de este empleado en esta semana de la base de datos">
-          🗑️ Borrar Horas
+          ${FLAT_TRASH_SVG} Borrar Horas
         </button>
       `;
     } else {
@@ -1602,7 +1670,7 @@ function renderWeeklyTable() {
         <strong>${workerRecord.name || wData.name}</strong><br>
         <small style="color:#64748b">
           ${workerRecord.role || wData.role}
-          ${phoneStr ? ` · 📱 ${phoneStr}` : ''}
+          ${phoneStr ? `<span class="worker-phone-tag">· ${FLAT_PHONE_SVG}${phoneStr}</span>` : ''}
         </small>
       </td>
       ${daysHtml}
@@ -1641,6 +1709,15 @@ async function handleAddWorker(e) {
   const phone = phoneInput ? phoneInput.value.trim() : '';
   if (!name || !activeRestaurant) return;
 
+  // Evitar añadir trabajadores duplicados con el mismo nombre y puesto
+  const alreadyExists = currentWorkers.some(
+    (w) => w.name.trim().toLowerCase() === name.toLowerCase() && w.role.toLowerCase() === role.toLowerCase()
+  );
+  if (alreadyExists) {
+    showToast(`Ya existe un trabajador registrado como "${name}" (${role}).`);
+    return;
+  }
+
   const newWorker = {
     id: Date.now(),
     name,
@@ -1654,7 +1731,10 @@ async function handleAddWorker(e) {
     submitBtn.textContent = 'Guardando...';
 
     await dbAddWorker(activeRestaurant.id, newWorker);
-    currentWorkers.push(newWorker);
+    if (!isUsingFirebase()) {
+      currentWorkers.push(newWorker);
+    }
+    currentWorkers = deduplicateWorkers(currentWorkers);
 
     nameInput.value = '';
     if (phoneInput) phoneInput.value = '';
@@ -1874,7 +1954,7 @@ function checkUnclosedShiftsNightly() {
     const names = unclosedWorkers.map((u) => u.name).join(', ');
     const html = `
       <div class="night-banner-content">
-        <span style="font-size:24px;">⏰</span>
+        <svg class="flat-svg-icon" viewBox="0 0 24 24" width="22" height="22" style="color:#d97706;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
         <div>
           <strong>Aviso de Jornada Abierta (Cierre Diario 23:59h):</strong><br>
           <span>Los siguientes trabajadores entraron y aún no han fichado salida: <strong>${names}</strong></span>
@@ -1895,14 +1975,15 @@ function checkUnclosedShiftsNightly() {
             return `
               ${rawPhone ? `
                 <a href="${smsHref}" class="btn-sms-pill" title="Enviar SMS directo a ${u.name}">
-                  📱 SMS a ${u.name}
+                  ${FLAT_PHONE_SVG} SMS a ${u.name}
                 </a>
                 <a href="${waHref}" target="_blank" rel="noopener" class="btn-sms-pill btn-whatsapp-pill" title="Avisar por WhatsApp a ${u.name}">
-                  💬 WhatsApp
+                  ${FLAT_CHAT_SVG} WhatsApp
                 </a>
               ` : `
-                <span style="font-size:12px; color:#92400e; padding:4px 8px; background:#fef3c7; border-radius:6px;">
-                  ⚠️ ${u.name} (Sin teléfono para SMS)
+                <span style="font-size:12px; color:#92400e; padding:4px 8px; background:#fef3c7; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
+                  <svg class="flat-svg-icon icon-sm no-margin" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                  ${u.name} (Sin teléfono para SMS)
                 </span>
               `}
             `;
