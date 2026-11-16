@@ -4,6 +4,28 @@
 
 const STORAGE_KEY = 'gastrotime_restaurants_v1';
 const SESSION_KEY = 'gastrotime_active_session_v1';
+const SESSION_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // Caducidad de inicio de sesión: 1 mes (30 días)
+
+// Guarda la sesión en localStorage manteniendo la fecha de inicio o creándola si es nuevo login
+function saveActiveSession(restaurantObj, isNewLogin = false) {
+  let loginTimestamp = Date.now();
+  if (!isNewLogin) {
+    const existing = localStorage.getItem(SESSION_KEY);
+    if (existing) {
+      try {
+        const parsed = JSON.parse(existing);
+        if (parsed && parsed.loginTimestamp) {
+          loginTimestamp = parsed.loginTimestamp;
+        }
+      } catch (_) {}
+    }
+  }
+  const sessionData = {
+    ...restaurantObj,
+    loginTimestamp
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+}
 
 const DAYS_OF_WEEK = [
   'Lunes',
@@ -176,7 +198,7 @@ async function dbRegisterRestaurant(name, password) {
     const docSnap = await docRef.get();
 
     if (docSnap.exists) {
-      throw new Error('Ya existe una empresa registrada con ese nombre en Firebase.');
+      throw new Error('Ya existe una empresa registrada con ese nombre.');
     }
 
     const restData = {
@@ -190,18 +212,29 @@ async function dbRegisterRestaurant(name, password) {
 
     await docRef.set(restData);
 
-    // Guardar semana actual inicial limpia
+    // Guardar semana actual inicial limpia en Firebase
     const currentMonday = getMondayOfDate(new Date());
     const weekRec = createEmptyWeekRecord(currentMonday, defaultWorkers);
     const weekRef = docRef.collection('weekly_records').doc(weekRec.weekId);
     await weekRef.set(weekRec);
+
+    // Guardar también en localStorage como respaldo/caché rápido
+    const all = getLocalRestaurants();
+    all[restKey] = {
+      ...restData,
+      workers: defaultWorkers,
+      weeklyRecords: {
+        [weekRec.weekId]: weekRec
+      }
+    };
+    saveLocalRestaurants(all);
 
     return restData;
   } else {
     // Modo Local
     const all = getLocalRestaurants();
     if (all[restKey]) {
-      throw new Error('Ya existe un restaurante registrado con ese nombre localmente.');
+      throw new Error('Ya existe una empresa registrada con ese nombre.');
     }
 
     const currentMonday = getMondayOfDate(new Date());
@@ -247,13 +280,25 @@ async function dbLoginRestaurant(name, password) {
     }
 
     if (!docSnap.exists) {
-      throw new Error('Restaurante no encontrado en Firebase.');
+      // Si existía previamente solo en local, migrarlo automáticamente a Firestore
+      const allLocal = getLocalRestaurants();
+      const localRest = allLocal[restKey];
+      if (localRest && localRest.password === password) {
+        await autoMigrateRestaurantToFirestore(restKey, localRest);
+        return { ...localRest, id: restKey };
+      }
+      throw new Error('Restaurante no encontrado.');
     }
 
     const data = docSnap.data();
     if (data.password !== password) {
       throw new Error('Contraseña incorrecta.');
     }
+
+    // Mantener sincronizado en almacenamiento local
+    const all = getLocalRestaurants();
+    all[docSnap.id] = { ...all[docSnap.id], ...data, id: docSnap.id };
+    saveLocalRestaurants(all);
 
     return { ...data, id: docSnap.id };
   } else {
@@ -581,33 +626,21 @@ async function dbUpdateAdminPin(restaurantId, newPin) {
   }
 }
 
-// 10. Subir todos los datos locales a Firebase (Herramienta de migración con 1 clic)
-async function uploadAllLocalDataToFirebase() {
-  if (!isUsingFirebase()) {
-    throw new Error('Primero debes conectar Firebase introduciendo tus credenciales.');
-  }
-
-  const allLocal = getLocalRestaurants();
-  const keys = Object.keys(allLocal);
-  if (keys.length === 0) {
-    throw new Error('No hay datos guardados localmente para migrar.');
-  }
-
-  const db = getFirestoreDb();
-  let migratedCount = 0;
-
-  for (const key of keys) {
-    const localRest = allLocal[key];
-    const restRef = db.collection('restaurants').doc(key);
+// 10. Auto-migración transparente a Firebase si existían datos locales previos
+async function autoMigrateRestaurantToFirestore(restKey, localRest) {
+  try {
+    const db = getFirestoreDb();
+    if (!db) return;
+    const restRef = db.collection('restaurants').doc(restKey);
 
     await restRef.set(
       {
-        id: key,
+        id: restKey,
         name: localRest.name,
-        nameLower: (localRest.name || key).toLowerCase(),
+        nameLower: (localRest.name || restKey).toLowerCase(),
         password: localRest.password,
         adminPin: localRest.adminPin || null,
-        migratedAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       },
       { merge: true }
     );
@@ -633,10 +666,88 @@ async function uploadAllLocalDataToFirebase() {
       }
     }
 
-    migratedCount++;
+    console.log(`✅ Restaurante "${localRest.name}" sincronizado con Firebase Firestore.`);
+  } catch (err) {
+    console.warn('Advertencia al auto-migrar restaurante a Firebase:', err);
+  }
+}
+
+// 11. Eliminar permanentemente el registro de una semana histórica de la base de datos
+async function dbDeleteHistoricalWeek(restaurantId, weekId) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('weekly_records')
+      .doc(weekId)
+      .delete();
   }
 
-  return migratedCount;
+  // Eliminar también del almacenamiento local
+  const all = getLocalRestaurants();
+  if (all[restaurantId] && all[restaurantId].weeklyRecords) {
+    delete all[restaurantId].weeklyRecords[weekId];
+    saveLocalRestaurants(all);
+  }
+}
+
+// 12. Borrar las horas registradas de un empleado en una semana concreta de la base de datos
+async function dbClearWorkerWeekHours(restaurantId, weekId, workerId) {
+  const shiftsByDay = {};
+  DAYS_OF_WEEK.forEach((d) => (shiftsByDay[d] = []));
+
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    const weekRef = db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('weekly_records')
+      .doc(weekId);
+
+    const snap = await weekRef.get();
+    if (snap.exists) {
+      const data = snap.data();
+      if (data.workers && data.workers[workerId]) {
+        data.workers[workerId].shifts = shiftsByDay;
+        data.workers[workerId].totalMinutes = 0;
+        data.workers[workerId].formattedTotal = '0h 00m';
+
+        // Recalcular gran total de la semana
+        let grandTotal = 0;
+        Object.values(data.workers).forEach((w) => {
+          grandTotal += w.totalMinutes || 0;
+        });
+        data.grandTotalMinutes = grandTotal;
+        data.grandTotalFormatted = formatDuration(grandTotal);
+        data.updatedAt = new Date().toISOString();
+
+        await weekRef.set(data, { merge: true });
+        return data;
+      }
+    }
+  }
+
+  // Actualizar copia local
+  const all = getLocalRestaurants();
+  if (all[restaurantId] && all[restaurantId].weeklyRecords && all[restaurantId].weeklyRecords[weekId]) {
+    const wRec = all[restaurantId].weeklyRecords[weekId];
+    if (wRec.workers && wRec.workers[workerId]) {
+      wRec.workers[workerId].shifts = shiftsByDay;
+      wRec.workers[workerId].totalMinutes = 0;
+      wRec.workers[workerId].formattedTotal = '0h 00m';
+
+      let grandTotal = 0;
+      Object.values(wRec.workers).forEach((w) => {
+        grandTotal += w.totalMinutes || 0;
+      });
+      wRec.grandTotalMinutes = grandTotal;
+      wRec.grandTotalFormatted = formatDuration(grandTotal);
+      saveLocalRestaurants(all);
+      return wRec;
+    }
+  }
+  return null;
 }
 
 // =============================================================================
@@ -717,13 +828,28 @@ function teardownFirestoreListeners() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   startLiveClock();
-  updateFirebaseStatusUI();
 
-  // Restaurar sesión activa si existe
+  // Restaurar sesión activa si existe y no ha expirado (1 mes de validez)
   const savedSession = localStorage.getItem(SESSION_KEY);
   if (savedSession) {
     try {
       const parsed = JSON.parse(savedSession);
+      const now = Date.now();
+
+      // Comprobar expiración tras 1 mes (30 días)
+      if (parsed.loginTimestamp && (now - parsed.loginTimestamp > SESSION_EXPIRATION_MS)) {
+        console.info('Sesión caducada tras 1 mes de inactividad.');
+        localStorage.removeItem(SESSION_KEY);
+        showToast('Tu sesión ha expirado tras 1 mes. Por favor, inicia sesión de nuevo.');
+        return;
+      }
+
+      // Si no tenía timestamp previo, inicializarlo con la fecha actual
+      if (!parsed.loginTimestamp) {
+        parsed.loginTimestamp = now;
+        localStorage.setItem(SESSION_KEY, JSON.stringify(parsed));
+      }
+
       if (parsed && parsed.id) {
         await restoreSession(parsed);
       }
@@ -737,6 +863,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function restoreSession(sessionObj) {
   try {
     activeRestaurant = sessionObj;
+
+    // Sincronizar datos frescos desde Firestore si está disponible
+    if (isUsingFirebase()) {
+      const db = getFirestoreDb();
+      if (db) {
+        try {
+          const docSnap = await db.collection('restaurants').doc(activeRestaurant.id).get();
+          if (docSnap.exists) {
+            activeRestaurant = { ...activeRestaurant, ...docSnap.data(), id: docSnap.id };
+            saveActiveSession(activeRestaurant, false);
+          } else {
+            const allLocal = getLocalRestaurants();
+            if (allLocal[activeRestaurant.id]) {
+              await autoMigrateRestaurantToFirestore(activeRestaurant.id, allLocal[activeRestaurant.id]);
+            }
+          }
+        } catch (dbErr) {
+          console.warn('Sincronización inicial con Firestore:', dbErr);
+        }
+      }
+    }
+
     currentWorkers = await dbLoadWorkers(activeRestaurant.id);
     const currentMonday = getMondayOfDate(new Date());
     currentWeekRecord = await dbGetOrCreateWeekRecord(activeRestaurant.id, currentMonday, currentWorkers);
@@ -746,43 +894,6 @@ async function restoreSession(sessionObj) {
   } catch (err) {
     console.warn('No se pudo restaurar sesión activa:', err);
     localStorage.removeItem(SESSION_KEY);
-  }
-}
-
-// Actualiza los botones e indicadores de estado de Firebase en toda la web
-function updateFirebaseStatusUI() {
-  const ready = isUsingFirebase();
-  const authDot = document.getElementById('auth-cloud-dot');
-  const authText = document.getElementById('auth-cloud-text');
-  const topbarDot = document.getElementById('topbar-cloud-dot');
-  const topbarText = document.getElementById('topbar-cloud-text');
-
-  if (ready) {
-    if (authDot) {
-      authDot.className = 'cloud-indicator-dot connected';
-    }
-    if (authText) {
-      authText.textContent = 'Firebase Conectado (Nube)';
-    }
-    if (topbarDot) {
-      topbarDot.className = 'cloud-indicator-dot connected';
-    }
-    if (topbarText) {
-      topbarText.textContent = 'Firebase Nube Activo';
-    }
-  } else {
-    if (authDot) {
-      authDot.className = 'cloud-indicator-dot';
-    }
-    if (authText) {
-      authText.textContent = 'Modo Local (Configurar Firebase)';
-    }
-    if (topbarDot) {
-      topbarDot.className = 'cloud-indicator-dot';
-    }
-    if (topbarText) {
-      topbarText.textContent = 'Configurar Firebase';
-    }
   }
 }
 
@@ -817,7 +928,7 @@ async function handleRegister(e) {
     errorEl.classList.add('hidden');
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Registrando en Firebase...';
+    submitBtn.textContent = 'Registrando empresa...';
 
     const restaurant = await dbRegisterRestaurant(name, pass);
     activeRestaurant = restaurant;
@@ -825,7 +936,8 @@ async function handleRegister(e) {
     const currentMonday = getMondayOfDate(new Date());
     currentWeekRecord = await dbGetOrCreateWeekRecord(activeRestaurant.id, currentMonday, currentWorkers);
 
-    localStorage.setItem(SESSION_KEY, JSON.stringify(activeRestaurant));
+    // Guardar sesión activa con vigencia de 1 mes
+    saveActiveSession(activeRestaurant, true);
     openAppView(activeRestaurant);
     setupFirestoreListeners(activeRestaurant.id);
 
@@ -852,7 +964,7 @@ async function handleLogin(e) {
     errorEl.classList.add('hidden');
     const submitBtn = e.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Verificando...';
+    submitBtn.textContent = 'Iniciando sesión...';
 
     const restaurant = await dbLoginRestaurant(name, pass);
     activeRestaurant = restaurant;
@@ -860,7 +972,8 @@ async function handleLogin(e) {
     const currentMonday = getMondayOfDate(new Date());
     currentWeekRecord = await dbGetOrCreateWeekRecord(activeRestaurant.id, currentMonday, currentWorkers);
 
-    localStorage.setItem(SESSION_KEY, JSON.stringify(activeRestaurant));
+    // Guardar sesión activa con vigencia de 1 mes
+    saveActiveSession(activeRestaurant, true);
     openAppView(activeRestaurant);
     setupFirestoreListeners(activeRestaurant.id);
 
@@ -1052,14 +1165,14 @@ function openClockConfirmation(workerId) {
     badge.style.background = '#fee2e2';
     badge.style.color = '#b91c1c';
     title.textContent = '¿Estás seguro de que quieres salir?';
-    desc.textContent = `${worker.name} (${worker.role}) — Vas a registrar tu hora de salida en Firebase.`;
+    desc.textContent = `${worker.name} (${worker.role}) — Vas a registrar tu hora de salida.`;
     confirmBtn.textContent = 'Sí, Fichar Salida';
   } else {
     badge.textContent = 'ENTRADA';
     badge.style.background = '#d1fae5';
     badge.style.color = '#065f46';
     title.textContent = '¿Estás seguro de que quieres entrar?';
-    desc.textContent = `${worker.name} (${worker.role}) — Vas a registrar tu hora de entrada en Firebase.`;
+    desc.textContent = `${worker.name} (${worker.role}) — Vas a registrar tu hora de entrada.`;
     confirmBtn.textContent = 'Sí, Fichar Entrada';
   }
 
@@ -1161,14 +1274,14 @@ async function processPinValidation(pin, inputEl) {
   if (pinModalMode === 'create') {
     activeRestaurant.adminPin = pin;
     await dbUpdateAdminPin(activeRestaurant.id, pin);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(activeRestaurant));
+    saveActiveSession(activeRestaurant, false);
     closePinModal();
     showAdminView();
-    showToast('PIN de Administrador guardado en Firebase.');
+    showToast('PIN de Administrador guardado.');
   } else if (pinModalMode === 'change') {
     activeRestaurant.adminPin = pin;
     await dbUpdateAdminPin(activeRestaurant.id, pin);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(activeRestaurant));
+    saveActiveSession(activeRestaurant, false);
     closePinModal();
     showToast('PIN de Administrador actualizado.');
   } else {
@@ -1243,17 +1356,23 @@ async function loadAndRenderSelectedWeek() {
   const screenRangeEl = document.getElementById('screen-week-range');
   const statusBadge = document.getElementById('week-status-badge');
   const currentWeekQuickBtn = document.getElementById('btn-current-week-quick');
+  const deleteWeekBtn = document.getElementById('btn-delete-week');
 
   if (weekTitleEl) weekTitleEl.textContent = rangeText;
   if (printRangeEl) printRangeEl.textContent = rangeText;
-  if (screenRangeEl) screenRangeEl.textContent = `${rangeText} — Guardado en Firebase.`;
+  if (screenRangeEl) screenRangeEl.textContent = `${rangeText} — Registro semanal oficial.`;
+
+  // El botón de borrar la semana de la base de datos solo se muestra en semanas pasadas
+  if (deleteWeekBtn) {
+    deleteWeekBtn.classList.toggle('hidden', !isPastWeek);
+  }
 
   if (statusBadge) {
     if (isCurrentWeek) {
       statusBadge.textContent = '🟢 Semana actual en curso';
       statusBadge.className = 'badge-status-pill active';
     } else if (isPastWeek) {
-      statusBadge.textContent = '📁 Registro Histórico Guardado en Firebase';
+      statusBadge.textContent = '📁 Registro Histórico Guardado';
       statusBadge.className = 'badge-status-pill historical';
     } else {
       statusBadge.textContent = '📅 Semana futura';
@@ -1269,6 +1388,70 @@ async function loadAndRenderSelectedWeek() {
   selectedWeekRecord = await dbGetOrCreateWeekRecord(activeRestaurant.id, selectedWeekMonday, currentWorkers);
 
   renderWeeklyTable();
+}
+
+// Elimina permanentemente una semana histórica anterior de la base de datos
+async function handleDeleteSelectedWeek() {
+  if (!activeRestaurant || !selectedWeekMonday) return;
+  const currentMonday = getMondayOfDate(new Date());
+  if (isSameDate(selectedWeekMonday, currentMonday)) {
+    alert('No se puede eliminar la semana en curso.');
+    return;
+  }
+
+  const weekId = getWeekId(selectedWeekMonday);
+  const weekRange = getWeekRangeText(selectedWeekMonday);
+
+  const confirmed = confirm(
+    `¿Estás seguro de que deseas eliminar permanentemente de la base de datos el registro de la "${weekRange}"?\n\nEsta acción borrará todas las horas registradas de esa semana.`
+  );
+  if (!confirmed) return;
+
+  try {
+    await dbDeleteHistoricalWeek(activeRestaurant.id, weekId);
+    showToast('Registro de la semana eliminado de la base de datos.');
+    await refreshHistoricalWeeksDropdown();
+    await goToCurrentWeek();
+  } catch (err) {
+    console.error('Error al eliminar semana:', err);
+    showToast('Error al eliminar semana: ' + err.message);
+  }
+}
+
+// Borra las horas de un empleado específico en la semana seleccionada en la base de datos
+async function handleClearWorkerWeekHours(workerId) {
+  if (!activeRestaurant || !selectedWeekMonday) return;
+  const weekId = getWeekId(selectedWeekMonday);
+  const weekRange = getWeekRangeText(selectedWeekMonday);
+
+  const wData =
+    (selectedWeekRecord && selectedWeekRecord.workers && selectedWeekRecord.workers[workerId]) ||
+    currentWorkers.find((w) => String(w.id) === String(workerId));
+  const workerName = wData ? wData.name : 'este empleado';
+
+  const confirmed = confirm(
+    `¿Deseas borrar y reiniciar a 0h todas las horas de ${workerName} para la "${weekRange}" en la base de datos?`
+  );
+  if (!confirmed) return;
+
+  try {
+    const updated = await dbClearWorkerWeekHours(activeRestaurant.id, weekId, String(workerId));
+    if (updated) {
+      selectedWeekRecord = updated;
+    } else if (selectedWeekRecord && selectedWeekRecord.workers && selectedWeekRecord.workers[workerId]) {
+      const shiftsByDay = {};
+      DAYS_OF_WEEK.forEach((d) => (shiftsByDay[d] = []));
+      selectedWeekRecord.workers[workerId].shifts = shiftsByDay;
+      selectedWeekRecord.workers[workerId].totalMinutes = 0;
+      selectedWeekRecord.workers[workerId].formattedTotal = '0h 00m';
+    }
+    renderWeeklyTable();
+    await refreshHistoricalWeeksDropdown();
+    showToast(`Horas de ${workerName} borradas de la base de datos para esta semana.`);
+  } catch (err) {
+    console.error('Error al borrar horas del trabajador:', err);
+    showToast('Error al borrar horas: ' + err.message);
+  }
 }
 
 async function refreshHistoricalWeeksDropdown() {
@@ -1338,6 +1521,9 @@ function renderWeeklyTable() {
   const weekRec = selectedWeekRecord || currentWeekRecord;
   if (!weekRec || !weekRec.workers) return;
 
+  const currentMonday = getMondayOfDate(new Date());
+  const isPastWeek = selectedWeekMonday ? selectedWeekMonday < currentMonday : false;
+
   let grandTotalMinutes = 0;
 
   // Mostramos todos los trabajadores activos + cualquier trabajador que haya registrado horas en esta semana
@@ -1396,6 +1582,21 @@ function renderWeeklyTable() {
 
     const phoneStr = wData.phone || workerRecord.phone;
 
+    let actionBtnHtml = '';
+    if (isPastWeek) {
+      actionBtnHtml = `
+        <button type="button" class="btn-danger-sm" onclick="handleClearWorkerWeekHours('${id}')" title="Borrar horas de este empleado en esta semana de la base de datos">
+          🗑️ Borrar Horas
+        </button>
+      `;
+    } else {
+      actionBtnHtml = `
+        <button type="button" class="btn-danger-sm" onclick="handleDeleteWorker('${id}')" title="Dar de baja trabajador">
+          Eliminar
+        </button>
+      `;
+    }
+
     tr.innerHTML = `
       <td>
         <strong>${workerRecord.name || wData.name}</strong><br>
@@ -1407,8 +1608,8 @@ function renderWeeklyTable() {
       ${daysHtml}
       <td class="total-hours-cell">${formatDuration(totalMins)}</td>
       <td class="print-only-col"></td>
-      <td class="no-print">
-        <button type="button" class="btn-danger-sm" onclick="handleDeleteWorker('${id}')">Eliminar</button>
+      <td class="no-print" style="white-space: nowrap;">
+        ${actionBtnHtml}
       </td>
     `;
 
@@ -1459,7 +1660,7 @@ async function handleAddWorker(e) {
     if (phoneInput) phoneInput.value = '';
     renderTerminalWorkers();
     await loadAndRenderSelectedWeek();
-    showToast(`Trabajador "${name}" (${role}) guardado en Firebase.`);
+    showToast(`Trabajador "${name}" (${role}) guardado correctamente.`);
   } catch (err) {
     console.error('Error añadiendo trabajador:', err);
     showToast('Error al añadir trabajador: ' + err.message);
@@ -1494,156 +1695,6 @@ async function handleDeleteWorker(workerId) {
 // =============================================================================
 // 13. MODAL Y CONFIGURACIÓN DE FIREBASE
 // =============================================================================
-
-function openFirebaseModal() {
-  const modal = document.getElementById('firebase-modal');
-  const statusBox = document.getElementById('firebase-connection-status-box');
-  const modalDot = document.getElementById('modal-cloud-dot');
-  const modalText = document.getElementById('modal-cloud-status-text');
-
-  const ready = isUsingFirebase();
-  const config = typeof getActiveFirebaseConfig === 'function' ? getActiveFirebaseConfig() : {};
-
-  if (ready) {
-    statusBox.className = 'connection-status-box connected';
-    modalDot.className = 'cloud-indicator-dot connected';
-    modalText.innerHTML = `
-      <strong>🟢 Conectado a Firebase Firestore:</strong> Tu base de datos en la nube está activa.<br>
-      Proyecto: <code>${config.projectId || 'Activo'}</code> — Los datos de la empresa, trabajadores y horas semanales se guardan en la nube.
-    `;
-  } else {
-    statusBox.className = 'connection-status-box unconfigured';
-    modalDot.className = 'cloud-indicator-dot';
-    modalText.innerHTML = `
-      <strong>🟡 Modo Local (Sin conectar a Firebase):</strong><br>
-      Tus datos se están guardando únicamente en este navegador. Para compartirlos entre varios dispositivos y tener base de datos permanente en la nube, pega tu configuración de Firebase abajo.
-    `;
-  }
-
-  // Prellenar campos si ya existen
-  if (config.projectId && config.projectId !== 'TU_PROJECT_ID') {
-    document.getElementById('fb-project-id').value = config.projectId || '';
-    document.getElementById('fb-api-key').value = config.apiKey || '';
-    document.getElementById('fb-auth-domain').value = config.authDomain || '';
-    document.getElementById('fb-storage-bucket').value = config.storageBucket || '';
-    document.getElementById('fb-messaging-id').value = config.messagingSenderId || '';
-    document.getElementById('fb-app-id').value = config.appId || '';
-  }
-
-  modal.classList.remove('hidden');
-}
-
-function closeFirebaseModal() {
-  document.getElementById('firebase-modal').classList.add('hidden');
-}
-
-function switchFirebaseTab(tab) {
-  currentFirebaseTab = tab;
-  document.getElementById('tab-btn-quick').classList.toggle('active', tab === 'quick');
-  document.getElementById('tab-btn-fields').classList.toggle('active', tab === 'fields');
-  document.getElementById('tab-btn-guide').classList.toggle('active', tab === 'guide');
-
-  document.getElementById('firebase-tab-quick').classList.toggle('hidden', tab !== 'quick');
-  document.getElementById('firebase-tab-fields').classList.toggle('hidden', tab !== 'fields');
-  document.getElementById('firebase-tab-guide').classList.toggle('hidden', tab !== 'guide');
-}
-
-// Analiza un texto pegado que contenga un objeto de configuración de Firebase
-function parsePastedFirebaseConfig(text) {
-  const clean = text.trim();
-  const config = {};
-
-  const extractMatch = (key) => {
-    const regex = new RegExp(`['"]?${key}['"]?\\s*:\\s*['"\`]([^'"\`]+)['"\`]`, 'i');
-    const match = clean.match(regex);
-    return match ? match[1].trim() : null;
-  };
-
-  config.apiKey = extractMatch('apiKey');
-  config.authDomain = extractMatch('authDomain');
-  config.projectId = extractMatch('projectId');
-  config.storageBucket = extractMatch('storageBucket');
-  config.messagingSenderId = extractMatch('messagingSenderId');
-  config.appId = extractMatch('appId');
-
-  // Si se pegó directamente como JSON
-  if (!config.projectId && clean.startsWith('{') && clean.endsWith('}')) {
-    try {
-      const obj = JSON.parse(clean);
-      return obj;
-    } catch (e) {
-      // Ignorar
-    }
-  }
-
-  return config;
-}
-
-function handleSaveFirebaseConfig() {
-  let config = {};
-
-  if (currentFirebaseTab === 'quick') {
-    const pasted = document.getElementById('firebase-paste-input').value;
-    if (!pasted.trim()) {
-      alert('Por favor pega el código de configuración de Firebase o completa los campos manuales.');
-      return;
-    }
-    config = parsePastedFirebaseConfig(pasted);
-  } else {
-    config = {
-      projectId: document.getElementById('fb-project-id').value.trim(),
-      apiKey: document.getElementById('fb-api-key').value.trim(),
-      authDomain: document.getElementById('fb-auth-domain').value.trim(),
-      storageBucket: document.getElementById('fb-storage-bucket').value.trim(),
-      messagingSenderId: document.getElementById('fb-messaging-id').value.trim(),
-      appId: document.getElementById('fb-app-id').value.trim()
-    };
-  }
-
-  if (!config.projectId || !config.apiKey) {
-    alert('Faltan datos obligatorios (Project ID y API Key). Revisa el código pegado o los campos.');
-    return;
-  }
-
-  if (!config.authDomain) {
-    config.authDomain = `${config.projectId}.firebaseapp.com`;
-  }
-  if (!config.storageBucket) {
-    config.storageBucket = `${config.projectId}.appspot.com`;
-  }
-
-  saveFirebaseConfigToStorage(config);
-  showToast('Configuración guardada. Recargando para conectar con Firebase...');
-
-  setTimeout(() => {
-    window.location.reload();
-  }, 1000);
-}
-
-async function handleUploadLocalToFirebase() {
-  if (!isUsingFirebase()) {
-    alert('Primero debes guardar y conectar tus credenciales de Firebase en el botón "Guardar y Conectar".');
-    return;
-  }
-
-  const btn = document.getElementById('btn-sync-local-data');
-  btn.disabled = true;
-  btn.textContent = 'Subiendo datos...';
-
-  try {
-    const count = await uploadAllLocalDataToFirebase();
-    showToast(`¡Éxito! Se han subido ${count} empresa(s) con todos sus empleados y registros a Firebase.`);
-    closeFirebaseModal();
-    if (activeRestaurant) {
-      await restoreSession(activeRestaurant);
-    }
-  } catch (err) {
-    alert(err.message || 'Error al subir los datos locales.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '📤 Subir Datos Locales a Firebase';
-  }
-}
 
 // =============================================================================
 // 14. NOTIFICACIONES FLOTANTES (TOAST)
@@ -1763,8 +1814,8 @@ async function handleSaveSettings(e) {
     }
   }
 
-  // Actualizar sesión activa
-  localStorage.setItem(SESSION_KEY, JSON.stringify(activeRestaurant));
+  // Actualizar sesión activa manteniendo expiración
+  saveActiveSession(activeRestaurant, false);
 
   // Actualizar DOM en la cabecera y en el informe imprimible
   const headerNameEl = document.getElementById('header-restaurant-name');

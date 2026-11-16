@@ -32,14 +32,6 @@
         <p class="brand-subtitle">Control Horario y Fichaje</p>
       </div>
 
-      <div class="auth-cloud-bar">
-        <button type="button" class="cloud-status-pill" id="auth-cloud-pill" onclick="openFirebaseModal()" title="Configuración de Base de Datos Firebase">
-          <span class="cloud-indicator-dot" id="auth-cloud-dot"></span>
-          <span id="auth-cloud-text">Comprobando Firebase...</span>
-          <span class="cloud-config-icon">⚙️</span>
-        </button>
-      </div>
-
       <div class="auth-tabs">
         <button type="button" id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
         <button type="button" id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">Registrar Restaurante</button>
@@ -96,10 +88,6 @@
         <h2 id="header-restaurant-name">Restaurante</h2>
       </div>
       <nav class="topbar-nav">
-        <button type="button" id="topbar-cloud-btn" class="nav-btn nav-cloud-btn" onclick="openFirebaseModal()" title="Configuración de Base de Datos Firebase">
-          <span class="cloud-indicator-dot" id="topbar-cloud-dot"></span>
-          <span id="topbar-cloud-text">Firebase</span>
-        </button>
         <button type="button" id="nav-terminal" class="nav-btn active" onclick="showTerminalView()">
           ⏱ Terminal Fichaje
         </button>
@@ -203,7 +191,7 @@
           <div class="week-nav-info">
             <span id="week-status-badge" class="badge-status-pill active">Semana actual en curso</span>
             <h2 id="selected-week-title" class="week-title-heading">Semana del ...</h2>
-            <p id="week-subtitle" class="week-subtitle-text">Registro guardado en Firebase</p>
+            <p id="week-subtitle" class="week-subtitle-text">Registro horario semanal oficial</p>
           </div>
           <div class="week-nav-actions">
             <button type="button" class="btn btn-outline" onclick="navigateWeek(-1)" title="Ver semana anterior">
@@ -215,11 +203,14 @@
             <button type="button" class="btn btn-outline" onclick="navigateWeek(1)" title="Ver semana siguiente">
               Semana Siguiente ▶
             </button>
+            <button type="button" id="btn-delete-week" class="btn btn-danger-sm hidden" onclick="handleDeleteSelectedWeek()" title="Eliminar permanentemente el registro de esta semana de la base de datos">
+              🗑️ Borrar Semana
+            </button>
           </div>
         </div>
         <div class="week-nav-subrow">
           <div class="history-select-wrap">
-            <label for="history-weeks-select">📂 Historial de Semanas Guardadas en Firebase:</label>
+            <label for="history-weeks-select">📂 Historial de semanas anteriores:</label>
             <select id="history-weeks-select" onchange="handleSelectHistoricalWeek(this.value)">
               <option value="">Cargando semanas guardadas...</option>
             </select>
@@ -364,99 +355,6 @@
           <button type="submit" class="btn btn-accent">Guardar Cambios</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- MODAL 3: CONFIGURACIÓN Y ESTADO DE FIREBASE -->
-  <div id="firebase-modal" class="modal-backdrop hidden">
-    <div class="modal-card modal-card-large">
-      <div class="modal-badge badge-dark">☁️ BASE DE DATOS FIREBASE</div>
-      <h3 id="modal-firebase-title">Base de Datos en la Nube (Firebase Firestore)</h3>
-      <p class="modal-desc">
-        Guarda en Firebase el registro de la empresa, los trabajadores y el historial de horas semanales para que nunca se pierdan.
-      </p>
-
-      <!-- Caja de estado de conexión -->
-      <div id="firebase-connection-status-box" class="connection-status-box unconfigured">
-        <span class="cloud-indicator-dot" id="modal-cloud-dot"></span>
-        <div id="modal-cloud-status-text">
-          <strong>Modo Local (Sin conectar a Firebase):</strong> Los datos se guardan solo en este navegador. Para compartirlos entre varios dispositivos y tener copia permanente en la nube, añade tu configuración de Firebase.
-        </div>
-      </div>
-
-      <div class="firebase-tabs">
-        <button type="button" class="tab-btn active" id="tab-btn-quick" onclick="switchFirebaseTab('quick')">Pegar Configuración</button>
-        <button type="button" class="tab-btn" id="tab-btn-fields" onclick="switchFirebaseTab('fields')">Campos Manuales</button>
-        <button type="button" class="tab-btn" id="tab-btn-guide" onclick="switchFirebaseTab('guide')">Guía Gratis (2 min)</button>
-      </div>
-
-      <!-- Pestaña 1: Pegar configuración rápida -->
-      <div id="firebase-tab-quick" class="firebase-tab-content">
-        <p class="help-text">
-          Pega aquí el código que te da Firebase en <em>Configuración del proyecto &gt; Tus apps &gt; Web (&lt;/&gt;)</em>:
-        </p>
-        <textarea id="firebase-paste-input" class="code-textarea" rows="6" placeholder='const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "mi-restaurante.firebaseapp.com",
-  projectId: "mi-restaurante-fichaje",
-  storageBucket: "mi-restaurante-fichaje.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};'></textarea>
-      </div>
-
-      <!-- Pestaña 2: Campos individuales -->
-      <div id="firebase-tab-fields" class="firebase-tab-content hidden">
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label for="fb-project-id">Project ID *</label>
-            <input type="text" id="fb-project-id" placeholder="mi-restaurante-fichaje">
-          </div>
-          <div class="form-group">
-            <label for="fb-api-key">API Key *</label>
-            <input type="text" id="fb-api-key" placeholder="AIzaSy...">
-          </div>
-          <div class="form-group">
-            <label for="fb-auth-domain">Auth Domain</label>
-            <input type="text" id="fb-auth-domain" placeholder="mi-restaurante.firebaseapp.com">
-          </div>
-          <div class="form-group">
-            <label for="fb-storage-bucket">Storage Bucket</label>
-            <input type="text" id="fb-storage-bucket" placeholder="mi-restaurante.appspot.com">
-          </div>
-          <div class="form-group">
-            <label for="fb-messaging-id">Messaging Sender ID</label>
-            <input type="text" id="fb-messaging-id" placeholder="123456789">
-          </div>
-          <div class="form-group">
-            <label for="fb-app-id">App ID</label>
-            <input type="text" id="fb-app-id" placeholder="1:123456:web:abcdef">
-          </div>
-        </div>
-      </div>
-
-      <!-- Pestaña 3: Guía rápida -->
-      <div id="firebase-tab-guide" class="firebase-tab-content hidden">
-        <div class="guide-box">
-          <ol>
-            <li>Entra en <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase Console (Google)</a> con tu cuenta de Google y pulsa <strong>"Crear un proyecto"</strong> (es 100% gratuito).</li>
-            <li>En el menú lateral, ve a <strong>Compilación &gt; Firestore Database</strong> y haz clic en <strong>"Crear base de datos"</strong>.</li>
-            <li>Selecciona <strong>"Iniciar en modo de prueba"</strong> (para permitir guardar los fichajes) y elige la ubicación más cercana (ej. <code>eur3</code> para Europa).</li>
-            <li>Haz clic en el icono del engranaje <strong>⚙️ Configuración del proyecto</strong> (arriba a la izquierda) &gt; baja a la sección <strong>"Tus apps"</strong> y haz clic en el icono web <strong>&lt;/&gt;</strong>.</li>
-            <li>Copia el bloque <code>const firebaseConfig = { ... }</code>, vuelve aquí, pégalo en la pestaña "Pegar Configuración" y pulsa "Guardar y Conectar".</li>
-          </ol>
-        </div>
-      </div>
-
-      <div class="modal-actions modal-actions-custom">
-        <button type="button" class="btn btn-secondary" onclick="closeFirebaseModal()">Cerrar</button>
-        <button type="button" id="btn-sync-local-data" class="btn btn-outline" onclick="handleUploadLocalToFirebase()" title="Sube los datos locales guardados en este navegador a tu base de datos de Firebase">
-          📤 Subir Datos Locales a Firebase
-        </button>
-        <button type="button" id="btn-save-firebase-config" class="btn btn-accent" onclick="handleSaveFirebaseConfig()">
-          💾 Guardar y Conectar
-        </button>
-      </div>
     </div>
   </div>
 
