@@ -231,25 +231,8 @@ input:focus, select:focus {
   margin-right: 4px;
 }
 
-.flat-svg-icon.icon-phone {
-  width: 12px;
-  height: 12px;
-  margin-right: 3px;
-  stroke-width: 2.2;
-  vertical-align: -1px;
-}
-
 .flat-svg-icon.no-margin {
   margin-right: 0;
-}
-
-.worker-phone-tag {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-muted);
-  font-weight: 500;
-  font-size: 11.5px;
-  margin-left: 2px;
 }
 
 .status-dot-pulse {
@@ -908,7 +891,7 @@ input:focus, select:focus {
   background: #fef2f2 !important;
 }
 
-/* --- ESTILOS DE AJUSTES DEL LOCAL Y NOTIFICACIONES SMS --- */
+/* --- ESTILOS DE AJUSTES DEL LOCAL --- */
 .settings-form {
   display: flex;
   flex-direction: column;
@@ -947,71 +930,6 @@ input:focus, select:focus {
   font-size: 13px;
   color: #475569;
   line-height: 1.5;
-}
-
-/* --- ALERTA NOCTURNA 23:59H DE TURNOS SIN SALIDA --- */
-.night-shifts-banner {
-  background: #fffbeb;
-  border: 1.5px solid #fde68a;
-  border-left: 5px solid #f59e0b;
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.night-banner-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13.5px;
-  color: #92400e;
-}
-
-.night-banner-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.btn-sms-pill {
-  background: #0f172a;
-  color: #ffffff;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: transform 0.1s, opacity 0.2s;
-}
-
-.btn-sms-pill:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.btn-whatsapp-pill {
-  background: #16a34a;
-  color: #ffffff;
-}
-
-/* --- ETIQUETA DE TELÉFONO DE TRABAJADOR --- */
-.worker-phone-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 2px;
 }
 
 /* --- ESTADOS VACÍOS (SIN TRABAJADORES) --- */

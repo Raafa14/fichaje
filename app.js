@@ -28,9 +28,7 @@ function saveActiveSession(restaurantObj, isNewLogin = false) {
 }
 
 // --- ICONOS PLANOS Y MINIMALISTAS (SVG) ---
-const FLAT_PHONE_SVG = `<svg class="flat-svg-icon icon-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3" ry="3"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>`;
 const FLAT_TRASH_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-const FLAT_CHAT_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`;
 const FLAT_LOCK_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
 
 // Deduplica trabajadores para evitar repeticiones por ID o Nombre+Puesto
@@ -192,7 +190,6 @@ function createEmptyWeekRecord(weekMonday, workersList = []) {
       id: w.id,
       name: w.name,
       role: w.role,
-      phone: w.phone || '',
       shifts: shiftsByDay,
       totalMinutes: 0,
       formattedTotal: '0h 00m'
@@ -423,7 +420,6 @@ async function dbAddWorker(restaurantId, workerObj) {
           id: workerObj.id,
           name: workerObj.name,
           role: workerObj.role,
-          phone: workerObj.phone || '',
           shifts: shiftsByDay,
           totalMinutes: 0,
           formattedTotal: '0h 00m'
@@ -447,7 +443,6 @@ async function dbAddWorker(restaurantId, workerObj) {
         id: workerObj.id,
         name: workerObj.name,
         role: workerObj.role,
-        phone: workerObj.phone || '',
         shifts: shiftsByDay,
         totalMinutes: 0,
         formattedTotal: '0h 00m'
@@ -503,7 +498,6 @@ async function dbGetOrCreateWeekRecord(restaurantId, mondayDate, workersList) {
             id: w.id,
             name: w.name,
             role: w.role,
-            phone: w.phone || '',
             shifts: shiftsByDay,
             totalMinutes: 0,
             formattedTotal: '0h 00m'
@@ -539,7 +533,6 @@ async function dbGetOrCreateWeekRecord(restaurantId, mondayDate, workersList) {
             id: w.id,
             name: w.name,
             role: w.role,
-            phone: w.phone || '',
             shifts: shiftsByDay,
             totalMinutes: 0,
             formattedTotal: '0h 00m'
@@ -1072,7 +1065,6 @@ function openAppView(restaurant) {
   document.getElementById('header-restaurant-name').textContent = restaurant.name;
   document.getElementById('print-restaurant-title').textContent = restaurant.name;
   showTerminalView();
-  checkUnclosedShiftsNightly();
 }
 
 // =============================================================================
@@ -1183,10 +1175,7 @@ function renderTerminalWorkers() {
           <div class="avatar">${getInitials(worker.name)}</div>
           <div>
             <div class="worker-name">${worker.name}</div>
-            <div class="worker-role">
-              ${worker.role}
-              ${worker.phone ? `<span class="worker-phone-tag">· ${FLAT_PHONE_SVG}${worker.phone}</span>` : ''}
-            </div>
+            <div class="worker-role">${worker.role}</div>
           </div>
         </div>
         <span class="status-tag">
@@ -1205,9 +1194,6 @@ function renderTerminalWorkers() {
   const countOffEl = document.getElementById('count-off');
   if (countWorkingEl) countWorkingEl.textContent = workingCount;
   if (countOffEl) countOffEl.textContent = currentWorkers.length - workingCount;
-
-  // Comprobar avisos nocturnos de salida
-  checkUnclosedShiftsNightly();
 }
 
 // =============================================================================
@@ -1622,7 +1608,6 @@ function renderWeeklyTable() {
     const workerRecord = weekRec.workers[id] || {
       name: wData.name,
       role: wData.role,
-      phone: wData.phone || '',
       shifts: {}
     };
 
@@ -1648,8 +1633,6 @@ function renderWeeklyTable() {
       }
     });
 
-    const phoneStr = wData.phone || workerRecord.phone;
-
     let actionBtnHtml = '';
     if (isPastWeek) {
       actionBtnHtml = `
@@ -1668,10 +1651,7 @@ function renderWeeklyTable() {
     tr.innerHTML = `
       <td>
         <strong>${workerRecord.name || wData.name}</strong><br>
-        <small style="color:#64748b">
-          ${workerRecord.role || wData.role}
-          ${phoneStr ? `<span class="worker-phone-tag">· ${FLAT_PHONE_SVG}${phoneStr}</span>` : ''}
-        </small>
+        <small style="color:#64748b">${workerRecord.role || wData.role}</small>
       </td>
       ${daysHtml}
       <td class="total-hours-cell">${formatDuration(totalMins)}</td>
@@ -1689,9 +1669,6 @@ function renderWeeklyTable() {
   if (hoursSummaryEl) {
     hoursSummaryEl.textContent = formatDuration(grandTotalMinutes);
   }
-
-  // Comprobar avisos nocturnos
-  checkUnclosedShiftsNightly();
 }
 
 // =============================================================================
@@ -1702,11 +1679,9 @@ async function handleAddWorker(e) {
   e.preventDefault();
   const nameInput = document.getElementById('worker-name');
   const roleSelect = document.getElementById('worker-role');
-  const phoneInput = document.getElementById('worker-phone');
 
   const name = nameInput.value.trim();
   const role = roleSelect.value;
-  const phone = phoneInput ? phoneInput.value.trim() : '';
   if (!name || !activeRestaurant) return;
 
   // Evitar añadir trabajadores duplicados con el mismo nombre y puesto
@@ -1721,8 +1696,7 @@ async function handleAddWorker(e) {
   const newWorker = {
     id: Date.now(),
     name,
-    role,
-    phone
+    role
   };
 
   try {
@@ -1737,7 +1711,6 @@ async function handleAddWorker(e) {
     currentWorkers = deduplicateWorkers(currentWorkers);
 
     nameInput.value = '';
-    if (phoneInput) phoneInput.value = '';
     renderTerminalWorkers();
     await loadAndRenderSelectedWeek();
     showToast(`Trabajador "${name}" (${role}) guardado correctamente.`);
@@ -1792,7 +1765,7 @@ function showToast(message) {
 }
 
 // =============================================================================
-// 15. AJUSTES DEL RESTAURANTE / LOCAL (CAMBIAR NOMBRE, SEGURIDAD Y SMS)
+// 15. AJUSTES DEL RESTAURANTE / LOCAL (CAMBIAR NOMBRE Y SEGURIDAD)
 // =============================================================================
 
 function openSettingsModal() {
@@ -1804,22 +1777,6 @@ function openSettingsModal() {
   if (nameInput) nameInput.value = activeRestaurant.name || '';
   if (pinInput) pinInput.value = activeRestaurant.adminPin || '';
 
-  // Cargar configuración guardada de Twilio si existe
-  const savedTwilio = localStorage.getItem('gastrotime_twilio_cfg_' + activeRestaurant.id);
-  if (savedTwilio) {
-    try {
-      const cfg = JSON.parse(savedTwilio);
-      const modeSel = document.getElementById('settings-sms-mode');
-      if (modeSel) modeSel.value = cfg.mode || 'direct';
-      document.getElementById('twilio-sid').value = cfg.sid || '';
-      document.getElementById('twilio-token').value = cfg.token || '';
-      document.getElementById('twilio-from').value = cfg.from || '';
-      toggleTwilioFields(cfg.mode || 'direct');
-    } catch (e) {
-      console.warn('Error leyendo configuración de Twilio:', e);
-    }
-  }
-
   modal.classList.remove('hidden');
 }
 
@@ -1828,24 +1785,15 @@ function closeSettingsModal() {
   if (modal) modal.classList.add('hidden');
 }
 
-function toggleTwilioFields(mode) {
-  const fields = document.getElementById('twilio-config-fields');
-  if (fields) {
-    fields.classList.toggle('hidden', mode !== 'twilio');
-  }
-}
-
 async function handleSaveSettings(e) {
   e.preventDefault();
   if (!activeRestaurant) return;
 
   const nameInput = document.getElementById('settings-rest-name');
   const pinInput = document.getElementById('settings-admin-pin');
-  const smsModeSel = document.getElementById('settings-sms-mode');
 
   const newName = nameInput.value.trim();
   const newPin = pinInput.value.trim();
-  const smsMode = smsModeSel ? smsModeSel.value : 'direct';
 
   if (!newName) {
     alert('El nombre del restaurante no puede estar vacío.');
@@ -1861,19 +1809,6 @@ async function handleSaveSettings(e) {
       return;
     }
     activeRestaurant.adminPin = newPin;
-  }
-
-  // Guardar configuración de SMS en localStorage
-  if (smsMode === 'twilio') {
-    const twilioCfg = {
-      mode: 'twilio',
-      sid: document.getElementById('twilio-sid').value.trim(),
-      token: document.getElementById('twilio-token').value.trim(),
-      from: document.getElementById('twilio-from').value.trim()
-    };
-    localStorage.setItem('gastrotime_twilio_cfg_' + activeRestaurant.id, JSON.stringify(twilioCfg));
-  } else {
-    localStorage.setItem('gastrotime_twilio_cfg_' + activeRestaurant.id, JSON.stringify({ mode: 'direct' }));
   }
 
   // Guardar cambios en Firestore o LocalStorage
@@ -1915,230 +1850,4 @@ window.addEventListener('beforeprint', () => {
   }
 });
 
-// =============================================================================
-// 16. AVISOS NOCTURNOS (23:59H) PARA TRABAJADORES SIN SALIDA (SMS / WHATSAPP)
-// =============================================================================
 
-function checkUnclosedShiftsNightly() {
-  if (!activeRestaurant || !currentWeekRecord || !currentWeekRecord.workers) return;
-
-  const today = getTodayName();
-  const unclosedWorkers = [];
-
-  currentWorkers.forEach((w) => {
-    const wRec = currentWeekRecord.workers[w.id] || currentWeekRecord.workers[String(w.id)];
-    if (wRec && wRec.shifts && wRec.shifts[today]) {
-      const todayShifts = wRec.shifts[today];
-      if (todayShifts.length > 0) {
-        const last = todayShifts[todayShifts.length - 1];
-        if (last && !last.out) {
-          unclosedWorkers.push({
-            id: w.id,
-            name: w.name,
-            phone: w.phone || '',
-            entryTime: last.in
-          });
-        }
-      }
-    }
-  });
-
-  const now = new Date();
-  const currentHH = now.getHours();
-  const currentMM = now.getMinutes();
-
-  const bannerTerminal = document.getElementById('night-shifts-alert-terminal');
-  const bannerAdmin = document.getElementById('night-shifts-alert-admin');
-
-  if (unclosedWorkers.length > 0) {
-    const names = unclosedWorkers.map((u) => u.name).join(', ');
-    const html = `
-      <div class="night-banner-content">
-        <svg class="flat-svg-icon" viewBox="0 0 24 24" width="22" height="22" style="color:#d97706;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
-        <div>
-          <strong>Aviso de Jornada Abierta (Cierre Diario 23:59h):</strong><br>
-          <span>Los siguientes trabajadores entraron y aún no han fichado salida: <strong>${names}</strong></span>
-        </div>
-      </div>
-      <div class="night-banner-actions">
-        ${unclosedWorkers
-          .map((u) => {
-            const rawPhone = (u.phone || '').replace(/[\s-]/g, '');
-            const smsText = encodeURIComponent(
-              `Hola ${u.name}, son las 23:59h y tienes el turno abierto en ${activeRestaurant.name}. Recuerda fichar tu salida.`
-            );
-            const smsHref = rawPhone ? `sms:${rawPhone}?body=${smsText}` : '#';
-            const cleanDigits = rawPhone.replace(/\+/g, '');
-            const intlPhone = cleanDigits.length === 9 ? '34' + cleanDigits : cleanDigits;
-            const waHref = rawPhone ? `https://wa.me/${intlPhone}?text=${smsText}` : '#';
-
-            return `
-              ${rawPhone ? `
-                <a href="${smsHref}" class="btn-sms-pill" title="Enviar SMS directo a ${u.name}">
-                  ${FLAT_PHONE_SVG} SMS a ${u.name}
-                </a>
-                <a href="${waHref}" target="_blank" rel="noopener" class="btn-sms-pill btn-whatsapp-pill" title="Avisar por WhatsApp a ${u.name}">
-                  ${FLAT_CHAT_SVG} WhatsApp
-                </a>
-              ` : `
-                <span style="font-size:12px; color:#92400e; padding:4px 8px; background:#fef3c7; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
-                  <svg class="flat-svg-icon icon-sm no-margin" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                  ${u.name} (Sin teléfono para SMS)
-                </span>
-              `}
-            `;
-          })
-          .join('')}
-      </div>
-    `;
-
-    if (bannerTerminal) {
-      bannerTerminal.innerHTML = html;
-      bannerTerminal.classList.remove('hidden');
-    }
-    if (bannerAdmin) {
-      bannerAdmin.innerHTML = html;
-      bannerAdmin.classList.remove('hidden');
-    }
-
-    // A las 23:59 en punto, intentar disparo automático si Twilio está configurado
-    if (currentHH === 23 && currentMM === 59 && !window._sentNightSmsToday) {
-      window._sentNightSmsToday = true;
-      dispatchAutomatedSmsBatch(unclosedWorkers);
-    }
-  } else {
-    if (bannerTerminal) bannerTerminal.classList.add('hidden');
-    if (bannerAdmin) bannerAdmin.classList.add('hidden');
-  }
-
-  // Reset diario al cambiar de hora
-  if (currentHH !== 23) {
-    window._sentNightSmsToday = false;
-  }
-}
-
-// Envía un SMS usando la API de Twilio con fallback a proxy CORS para navegadores
-async function sendTwilioMessage(sid, token, from, to, body) {
-  const cleanTo = to.replace(/[\s-]/g, '');
-  const intlTo = cleanTo.startsWith('+') ? cleanTo : '+34' + cleanTo;
-  const cleanFrom = from.replace(/[\s-]/g, '');
-
-  const params = new URLSearchParams({
-    To: intlTo,
-    From: cleanFrom,
-    Body: body
-  });
-
-  const authHeader = 'Basic ' + btoa(`${sid}:${token}`);
-
-  try {
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params.toString()
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('Envío directo bloqueado por CORS, usando pasarela segura...', err);
-  }
-
-  // Fallback con pasarela proxy segura para navegadores
-  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`)}`;
-  const proxyRes = await fetch(proxyUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: params.toString()
-  });
-
-  if (!proxyRes.ok) {
-    const errData = await proxyRes.json().catch(() => ({}));
-    throw new Error(errData.message || `Error HTTP ${proxyRes.status} al enviar SMS con Twilio.`);
-  }
-
-  return await proxyRes.json();
-}
-
-async function handleSendTestTwilioSms(e) {
-  e.preventDefault();
-  const sid = document.getElementById('twilio-sid').value.trim();
-  const token = document.getElementById('twilio-token').value.trim();
-  const from = document.getElementById('twilio-from').value.trim();
-  const testPhone = document.getElementById('twilio-test-phone').value.trim();
-  const btn = e.target;
-
-  if (!sid || !token || !from) {
-    alert('Por favor completa primero los 3 campos de Twilio (Account SID, Auth Token y Número Remitente).');
-    return;
-  }
-  if (!testPhone) {
-    alert('Introduce un número de móvil para recibir el SMS de prueba.');
-    return;
-  }
-
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
-
-  try {
-    await sendTwilioMessage(
-      sid,
-      token,
-      from,
-      testPhone,
-      `[GastroTime] Prueba de aviso SMS automática para ${activeRestaurant ? activeRestaurant.name : 'tu local'}. ¡Configuración correcta!`
-    );
-    showToast(`¡SMS de prueba enviado con éxito al número ${testPhone}!`);
-  } catch (err) {
-    console.error('Error enviando SMS de prueba:', err);
-    alert('Error al enviar SMS con Twilio:\n' + err.message + '\n\nRecuerda que en cuentas de prueba de Twilio, el móvil de destino debe estar verificado en "Verified Caller IDs".');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-}
-
-async function dispatchAutomatedSmsBatch(workers) {
-  if (!activeRestaurant) return;
-  const savedTwilio = localStorage.getItem('gastrotime_twilio_cfg_' + activeRestaurant.id);
-  if (!savedTwilio) return;
-
-  try {
-    const cfg = JSON.parse(savedTwilio);
-    if (cfg.mode === 'twilio' && cfg.sid && cfg.token && cfg.from) {
-      for (const w of workers) {
-        if (w.phone) {
-          try {
-            await sendTwilioMessage(
-              cfg.sid,
-              cfg.token,
-              cfg.from,
-              w.phone,
-              `Hola ${w.name}, son las 23:59h y se te ha olvidado fichar la salida en ${activeRestaurant.name}. Por favor registra tu hora de salida.`
-            );
-          } catch (itemErr) {
-            console.warn(`Error enviando SMS automático a ${w.name}:`, itemErr);
-          }
-        }
-      }
-      showToast('Avisos SMS de las 23:59h enviados a los empleados con turno abierto.');
-    }
-  } catch (err) {
-    console.warn('Error en envío automático de SMS nocturnos:', err);
-  }
-}
-
-function startNightlyShiftWatcher() {
-  checkUnclosedShiftsNightly();
-  setInterval(checkUnclosedShiftsNightly, 30000);
-}
-
-// Iniciar vigilancia nocturna automáticamente
-startNightlyShiftWatcher();

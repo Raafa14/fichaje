@@ -105,9 +105,6 @@
 
     <!-- SUBVISTA A: TERMINAL PÚBLICO DE FICHAJE -->
     <main id="terminal-section" class="container">
-      <!-- Alerta nocturna de turnos sin salida (23:59h) -->
-      <div id="night-shifts-alert-terminal" class="night-shifts-banner hidden"></div>
-
       <section class="clock-banner">
         <div>
           <span class="pill-badge">● TERMINAL DE FICHAJE DEL PERSONAL</span>
@@ -139,9 +136,6 @@
 
     <!-- SUBVISTA B: CONTROL SEMANAL PROTEGIDO (ADMIN) -->
     <main id="admin-section" class="container hidden">
-      <!-- Alerta nocturna de turnos sin salida (23:59h) -->
-      <div id="night-shifts-alert-admin" class="night-shifts-banner hidden"></div>
-
       <div class="admin-toolbar no-print">
         <button type="button" class="btn btn-secondary" onclick="showTerminalView()">
           ← Bloquear y Volver al Terminal
@@ -163,7 +157,7 @@
       <section class="card no-print">
         <div class="card-header">
           <h3>Añadir Nuevo Trabajador</h3>
-          <p>Introduce el nombre, puesto y teléfono para que aparezca en el terminal de fichaje y reciba avisos SMS a las 23:59 si olvida fichar la salida.</p>
+          <p>Introduce el nombre y puesto del empleado para darlo de alta en el terminal de fichaje.</p>
         </div>
         <form class="add-worker-form" onsubmit="handleAddWorker(event)">
           <div class="form-group">
@@ -176,10 +170,6 @@
               <option value="Terraza">Terraza</option>
               <option value="Encargado">Encargado</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label for="worker-phone">Teléfono móvil (Avisos SMS 23:59h)</label>
-            <input type="tel" id="worker-phone" placeholder="Ej. 612 345 678" pattern="[0-9+ ]{9,16}">
           </div>
           <button type="submit" class="btn btn-accent">+ Añadir</button>
         </form>
@@ -296,14 +286,14 @@
     </div>
   </div>
 
-  <!-- MODAL 4: AJUSTES DEL RESTAURANTE Y AVISOS SMS -->
+  <!-- MODAL 4: AJUSTES DEL RESTAURANTE -->
   <div id="settings-modal" class="modal-backdrop hidden">
     <div class="modal-card modal-card-large">
       <div class="modal-badge badge-dark">
         <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>AJUSTES DEL LOCAL
       </div>
       <h3>Ajustes del Restaurante</h3>
-      <p class="modal-desc">Cambia el nombre de tu empresa, ajusta la seguridad y configura los avisos SMS a las 23:59.</p>
+      <p class="modal-desc">Cambia el nombre de tu empresa y ajusta el código PIN de acceso de administración.</p>
 
       <form onsubmit="handleSaveSettings(event)" class="settings-form">
         <div class="settings-card-block">
@@ -325,47 +315,6 @@
             <label for="settings-admin-pin">PIN de Administrador (4 números)</label>
             <input type="password" id="settings-admin-pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••">
             <span class="field-hint">PIN numérico de 4 dígitos para acceder al Control Semanal.</span>
-          </div>
-        </div>
-
-        <div class="settings-card-block">
-          <div class="settings-block-title">
-            <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>Aviso SMS Nocturno a las 23:59h
-          </div>
-          <p class="settings-info-p">
-            Si un empleado ficha entrada y olvida fichar la salida, a las <strong>23:59h</strong> se detecta automáticamente y se le puede enviar un recordatorio SMS / WhatsApp a su móvil para que no se quede la jornada abierta.
-          </p>
-
-          <div class="form-group">
-            <label for="settings-sms-mode">Método de Envío:</label>
-            <select id="settings-sms-mode" onchange="toggleTwilioFields(this.value)">
-              <option value="direct">Aviso directo WhatsApp / Enlace SMS nativo (Gratis y sin coste)</option>
-              <option value="twilio">Envío automático en segundo plano con Twilio API (Opcional)</option>
-            </select>
-          </div>
-
-          <div id="twilio-config-fields" class="hidden form-grid-2">
-            <div class="form-group">
-              <label for="twilio-sid">Twilio Account SID</label>
-              <input type="text" id="twilio-sid" placeholder="ACxxxxxxxxxxxxxxxx">
-            </div>
-            <div class="form-group">
-              <label for="twilio-token">Twilio Auth Token</label>
-              <input type="password" id="twilio-token" placeholder="••••••••••••••••">
-            </div>
-            <div class="form-group">
-              <label for="twilio-from">Número Twilio Remitente</label>
-              <input type="text" id="twilio-from" placeholder="+15017122661">
-            </div>
-            <div class="form-group" style="display: flex; gap: 8px; align-items: flex-end;">
-              <div style="flex: 1;">
-                <label for="twilio-test-phone">Móvil de prueba</label>
-                <input type="tel" id="twilio-test-phone" placeholder="Ej. 677388168">
-              </div>
-              <button type="button" class="btn btn-secondary" onclick="handleSendTestTwilioSms(event)" style="white-space: nowrap; height: 42px;">
-                Enviar Prueba
-              </button>
-            </div>
           </div>
         </div>
 
