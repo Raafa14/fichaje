@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Fondo plano minimalista redondeado -->
+  <rect width="64" height="64" rx="18" fill="#0f172a" />
+  
+  <!-- Círculo sutil de precisión horaria -->
+  <circle cx="32" cy="32" r="23" fill="none" stroke="#334155" stroke-width="2.5" opacity="0.6" />
+  <circle cx="32" cy="32" r="2.5" fill="#f59e0b" />
+  
+  <!-- Tenedor plano minimalista (blanco puro) -->
+  <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Púas y cabezal -->
+    <path d="M22 17v8c0 3 2.5 5 5 5v17c0 1-.8 2-2 2" />
+    <path d="M27 17v7" />
+    <path d="M32 17v8c0 3-2.5 5-5 5" />
+  </g>
+  
+  <!-- Cuchillo plano minimalista (ámbar vibrante #f59e0b) -->
+  <g fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M41 17c-4 0-7 2.8-7 6.5v8.5h4v15c0 1 .8 2 2 2" />
+  </g>
+</svg>

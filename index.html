@@ -4,17 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GastroTime - Control Horario de Restaurante</title>
+  <!-- Favicon plano minimalista en SVG -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="styles.css">
+  <!-- Firebase SDK v10 (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
 </head>
 <body>
 
   <!-- VISTA 1: ACCESO / REGISTRO DEL RESTAURANTE -->
   <div id="auth-view" class="auth-wrapper">
     <div class="auth-card">
-      <div class="auth-header">
-        <div class="brand-icon">🍴</div>
-        <h1>GastroTime</h1>
-        <p>Control Horario y Fichaje de Restaurante</p>
+      <div class="auth-header flat-header">
+        <div class="brand-icon-flat">
+          <svg viewBox="0 0 48 48" width="48" height="48" fill="none">
+            <rect width="48" height="48" rx="14" fill="#0f172a" />
+            <circle cx="24" cy="24" r="18" stroke="#334155" stroke-width="1.8" />
+            <path d="M17 12v8a3 3 0 0 0 3 3v13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 12v5a3 3 0 0 0 3 3" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M20 12v5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M30 12c-3 0-5.5 2.2-5.5 5.5v7.5h3.5v11" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1 class="brand-title">Gastro<span class="brand-time">Time</span></h1>
+        <p class="brand-subtitle">Control Horario y Fichaje</p>
+      </div>
+
+      <div class="auth-cloud-bar">
+        <button type="button" class="cloud-status-pill" id="auth-cloud-pill" onclick="openFirebaseModal()" title="Configuración de Base de Datos Firebase">
+          <span class="cloud-indicator-dot" id="auth-cloud-dot"></span>
+          <span id="auth-cloud-text">Comprobando Firebase...</span>
+          <span class="cloud-config-icon">⚙️</span>
+        </button>
       </div>
 
       <div class="auth-tabs">
@@ -61,15 +84,30 @@
     <!-- Barra de Navegación Superior -->
     <header class="topbar no-print">
       <div class="topbar-left">
-        <span class="brand-badge">🍴 GastroTime</span>
+        <span class="brand-badge">
+          <svg class="brand-svg-mini" viewBox="0 0 24 24" width="18" height="18" fill="none">
+            <path d="M8 3v6a2 2 0 0 0 2 2v10" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 3v4a2 2 0 0 0 2 2" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M10 3v4" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 3c-2 0-3.5 1.5-3.5 3.5v5.5h2v9" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Gastro<span class="brand-time">Time</span>
+        </span>
         <h2 id="header-restaurant-name">Restaurante</h2>
       </div>
       <nav class="topbar-nav">
+        <button type="button" id="topbar-cloud-btn" class="nav-btn nav-cloud-btn" onclick="openFirebaseModal()" title="Configuración de Base de Datos Firebase">
+          <span class="cloud-indicator-dot" id="topbar-cloud-dot"></span>
+          <span id="topbar-cloud-text">Firebase</span>
+        </button>
         <button type="button" id="nav-terminal" class="nav-btn active" onclick="showTerminalView()">
           ⏱ Terminal Fichaje
         </button>
         <button type="button" id="nav-admin" class="nav-btn" onclick="requestAdminAccess()">
           🔒 Control Semanal (Admin)
+        </button>
+        <button type="button" id="nav-settings" class="nav-btn nav-settings-btn" onclick="openSettingsModal()" title="Ajustes del Restaurante">
+          ⚙️ Ajustes
         </button>
         <button type="button" class="nav-btn nav-logout" onclick="logoutRestaurant()">
           Cerrar Sesión
@@ -79,6 +117,9 @@
 
     <!-- SUBVISTA A: TERMINAL PÚBLICO DE FICHAJE -->
     <main id="terminal-section" class="container">
+      <!-- Alerta nocturna de turnos sin salida (23:59h) -->
+      <div id="night-shifts-alert-terminal" class="night-shifts-banner hidden"></div>
+
       <section class="clock-banner">
         <div>
           <span class="pill-badge">● TERMINAL DE FICHAJE DEL PERSONAL</span>
@@ -110,11 +151,17 @@
 
     <!-- SUBVISTA B: CONTROL SEMANAL PROTEGIDO (ADMIN) -->
     <main id="admin-section" class="container hidden">
+      <!-- Alerta nocturna de turnos sin salida (23:59h) -->
+      <div id="night-shifts-alert-admin" class="night-shifts-banner hidden"></div>
+
       <div class="admin-toolbar no-print">
         <button type="button" class="btn btn-secondary" onclick="showTerminalView()">
           ← Bloquear y Volver al Terminal
         </button>
         <div class="toolbar-actions">
+          <button type="button" class="btn btn-outline" onclick="openSettingsModal()">
+            ⚙️ Ajustes del Local
+          </button>
           <button type="button" class="btn btn-outline" onclick="openChangePinModal()">
             🔑 Cambiar PIN Admin
           </button>
@@ -128,7 +175,7 @@
       <section class="card no-print">
         <div class="card-header">
           <h3>Añadir Nuevo Trabajador</h3>
-          <p>Introduce el nombre y el puesto para que aparezca en el terminal de fichaje y en la tabla semanal.</p>
+          <p>Introduce el nombre, puesto y teléfono para que aparezca en el terminal de fichaje y reciba avisos SMS a las 23:59 si olvida fichar la salida.</p>
         </div>
         <form class="add-worker-form" onsubmit="handleAddWorker(event)">
           <div class="form-group">
@@ -142,8 +189,46 @@
               <option value="Encargado">Encargado</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="worker-phone">Teléfono móvil (Avisos SMS 23:59h)</label>
+            <input type="tel" id="worker-phone" placeholder="Ej. 612 345 678" pattern="[0-9+ ]{9,16}">
+          </div>
           <button type="submit" class="btn btn-accent">+ Añadir</button>
         </form>
+      </section>
+
+      <!-- Selector de Semanas e Historial Guardado en Firebase -->
+      <section class="card no-print week-nav-card">
+        <div class="week-nav-row">
+          <div class="week-nav-info">
+            <span id="week-status-badge" class="badge-status-pill active">Semana actual en curso</span>
+            <h2 id="selected-week-title" class="week-title-heading">Semana del ...</h2>
+            <p id="week-subtitle" class="week-subtitle-text">Registro guardado en Firebase</p>
+          </div>
+          <div class="week-nav-actions">
+            <button type="button" class="btn btn-outline" onclick="navigateWeek(-1)" title="Ver semana anterior">
+              ◀ Semana Anterior
+            </button>
+            <button type="button" id="btn-current-week-quick" class="btn btn-secondary active-week-btn" onclick="goToCurrentWeek()">
+              Semana Actual
+            </button>
+            <button type="button" class="btn btn-outline" onclick="navigateWeek(1)" title="Ver semana siguiente">
+              Semana Siguiente ▶
+            </button>
+          </div>
+        </div>
+        <div class="week-nav-subrow">
+          <div class="history-select-wrap">
+            <label for="history-weeks-select">📂 Historial de Semanas Guardadas en Firebase:</label>
+            <select id="history-weeks-select" onchange="handleSelectHistoricalWeek(this.value)">
+              <option value="">Cargando semanas guardadas...</option>
+            </select>
+          </div>
+          <div class="week-hours-summary-badge">
+            <span>Total horas del equipo esta semana:</span>
+            <strong id="week-hours-summary-num">0h 00m</strong>
+          </div>
+        </div>
       </section>
 
       <!-- Cuadrante Semanal Lunes a Domingo (Sin datos económicos) -->
@@ -172,7 +257,7 @@
                 <th>Sábado</th>
                 <th>Domingo</th>
                 <th>Total Horas</th>
-                <th class="print-only-col">Firma Trabajador</th>
+                <th class="print-only-col">Firma Encargado</th>
                 <th class="no-print">Acción</th>
               </tr>
             </thead>
@@ -208,13 +293,170 @@
       <h3 id="pin-modal-title">Introduce el PIN de Administrador</h3>
       <p id="pin-modal-desc" class="modal-desc">Escribe tu PIN de 4 dígitos para acceder.</p>
       <form onsubmit="handlePinSubmit(event)">
-        <input type="password" id="pin-input" class="pin-input" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••" required>
+        <input type="password" id="pin-input" class="pin-input" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••" required oninput="handlePinAutoInput(this)">
         <p id="pin-error" class="error-text hidden"></p>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" onclick="closePinModal()">Cancelar</button>
           <button type="submit" id="pin-submit-btn" class="btn btn-primary">Acceder</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: AJUSTES DEL RESTAURANTE Y AVISOS SMS -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal-card modal-card-large">
+      <div class="modal-badge badge-dark">⚙️ AJUSTES DEL LOCAL</div>
+      <h3>Ajustes del Restaurante</h3>
+      <p class="modal-desc">Cambia el nombre de tu empresa, ajusta la seguridad y configura los avisos SMS a las 23:59.</p>
+
+      <form onsubmit="handleSaveSettings(event)" class="settings-form">
+        <div class="settings-card-block">
+          <div class="settings-block-title">🏢 Identidad del Restaurante</div>
+          <div class="form-group">
+            <label for="settings-rest-name">Nombre del Restaurante / Local *</label>
+            <input type="text" id="settings-rest-name" required placeholder="Ej. Restaurante El Mirador">
+            <span class="field-hint">Este nombre se actualizará en la barra superior y en el informe semanal oficial de firma.</span>
+          </div>
+        </div>
+
+        <div class="settings-card-block">
+          <div class="settings-block-title">🔒 Seguridad</div>
+          <div class="form-group">
+            <label for="settings-admin-pin">PIN de Administrador (4 números)</label>
+            <input type="password" id="settings-admin-pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••">
+            <span class="field-hint">PIN numérico de 4 dígitos para acceder al Control Semanal.</span>
+          </div>
+        </div>
+
+        <div class="settings-card-block">
+          <div class="settings-block-title">⏰ Aviso SMS Nocturno a las 23:59h</div>
+          <p class="settings-info-p">
+            Si un empleado ficha entrada y olvida fichar la salida, a las <strong>23:59h</strong> se detecta automáticamente y se le puede enviar un recordatorio SMS / WhatsApp a su móvil para que no se quede la jornada abierta.
+          </p>
+
+          <div class="form-group">
+            <label for="settings-sms-mode">Método de Envío:</label>
+            <select id="settings-sms-mode" onchange="toggleTwilioFields(this.value)">
+              <option value="direct">Aviso directo WhatsApp / Enlace SMS nativo (Gratis y sin coste)</option>
+              <option value="twilio">Envío automático en segundo plano con Twilio API (Opcional)</option>
+            </select>
+          </div>
+
+          <div id="twilio-config-fields" class="hidden form-grid-2">
+            <div class="form-group">
+              <label for="twilio-sid">Twilio Account SID</label>
+              <input type="text" id="twilio-sid" placeholder="ACxxxxxxxxxxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label for="twilio-token">Twilio Auth Token</label>
+              <input type="password" id="twilio-token" placeholder="••••••••••••••••">
+            </div>
+            <div class="form-group">
+              <label for="twilio-from">Número Twilio Remitente</label>
+              <input type="text" id="twilio-from" placeholder="+34900000000">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions modal-actions-custom">
+          <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Cancelar</button>
+          <button type="submit" class="btn btn-accent">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: CONFIGURACIÓN Y ESTADO DE FIREBASE -->
+  <div id="firebase-modal" class="modal-backdrop hidden">
+    <div class="modal-card modal-card-large">
+      <div class="modal-badge badge-dark">☁️ BASE DE DATOS FIREBASE</div>
+      <h3 id="modal-firebase-title">Base de Datos en la Nube (Firebase Firestore)</h3>
+      <p class="modal-desc">
+        Guarda en Firebase el registro de la empresa, los trabajadores y el historial de horas semanales para que nunca se pierdan.
+      </p>
+
+      <!-- Caja de estado de conexión -->
+      <div id="firebase-connection-status-box" class="connection-status-box unconfigured">
+        <span class="cloud-indicator-dot" id="modal-cloud-dot"></span>
+        <div id="modal-cloud-status-text">
+          <strong>Modo Local (Sin conectar a Firebase):</strong> Los datos se guardan solo en este navegador. Para compartirlos entre varios dispositivos y tener copia permanente en la nube, añade tu configuración de Firebase.
+        </div>
+      </div>
+
+      <div class="firebase-tabs">
+        <button type="button" class="tab-btn active" id="tab-btn-quick" onclick="switchFirebaseTab('quick')">Pegar Configuración</button>
+        <button type="button" class="tab-btn" id="tab-btn-fields" onclick="switchFirebaseTab('fields')">Campos Manuales</button>
+        <button type="button" class="tab-btn" id="tab-btn-guide" onclick="switchFirebaseTab('guide')">Guía Gratis (2 min)</button>
+      </div>
+
+      <!-- Pestaña 1: Pegar configuración rápida -->
+      <div id="firebase-tab-quick" class="firebase-tab-content">
+        <p class="help-text">
+          Pega aquí el código que te da Firebase en <em>Configuración del proyecto &gt; Tus apps &gt; Web (&lt;/&gt;)</em>:
+        </p>
+        <textarea id="firebase-paste-input" class="code-textarea" rows="6" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "mi-restaurante.firebaseapp.com",
+  projectId: "mi-restaurante-fichaje",
+  storageBucket: "mi-restaurante-fichaje.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
+};'></textarea>
+      </div>
+
+      <!-- Pestaña 2: Campos individuales -->
+      <div id="firebase-tab-fields" class="firebase-tab-content hidden">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="fb-project-id">Project ID *</label>
+            <input type="text" id="fb-project-id" placeholder="mi-restaurante-fichaje">
+          </div>
+          <div class="form-group">
+            <label for="fb-api-key">API Key *</label>
+            <input type="text" id="fb-api-key" placeholder="AIzaSy...">
+          </div>
+          <div class="form-group">
+            <label for="fb-auth-domain">Auth Domain</label>
+            <input type="text" id="fb-auth-domain" placeholder="mi-restaurante.firebaseapp.com">
+          </div>
+          <div class="form-group">
+            <label for="fb-storage-bucket">Storage Bucket</label>
+            <input type="text" id="fb-storage-bucket" placeholder="mi-restaurante.appspot.com">
+          </div>
+          <div class="form-group">
+            <label for="fb-messaging-id">Messaging Sender ID</label>
+            <input type="text" id="fb-messaging-id" placeholder="123456789">
+          </div>
+          <div class="form-group">
+            <label for="fb-app-id">App ID</label>
+            <input type="text" id="fb-app-id" placeholder="1:123456:web:abcdef">
+          </div>
+        </div>
+      </div>
+
+      <!-- Pestaña 3: Guía rápida -->
+      <div id="firebase-tab-guide" class="firebase-tab-content hidden">
+        <div class="guide-box">
+          <ol>
+            <li>Entra en <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase Console (Google)</a> con tu cuenta de Google y pulsa <strong>"Crear un proyecto"</strong> (es 100% gratuito).</li>
+            <li>En el menú lateral, ve a <strong>Compilación &gt; Firestore Database</strong> y haz clic en <strong>"Crear base de datos"</strong>.</li>
+            <li>Selecciona <strong>"Iniciar en modo de prueba"</strong> (para permitir guardar los fichajes) y elige la ubicación más cercana (ej. <code>eur3</code> para Europa).</li>
+            <li>Haz clic en el icono del engranaje <strong>⚙️ Configuración del proyecto</strong> (arriba a la izquierda) &gt; baja a la sección <strong>"Tus apps"</strong> y haz clic en el icono web <strong>&lt;/&gt;</strong>.</li>
+            <li>Copia el bloque <code>const firebaseConfig = { ... }</code>, vuelve aquí, pégalo en la pestaña "Pegar Configuración" y pulsa "Guardar y Conectar".</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="modal-actions modal-actions-custom">
+        <button type="button" class="btn btn-secondary" onclick="closeFirebaseModal()">Cerrar</button>
+        <button type="button" id="btn-sync-local-data" class="btn btn-outline" onclick="handleUploadLocalToFirebase()" title="Sube los datos locales guardados en este navegador a tu base de datos de Firebase">
+          📤 Subir Datos Locales a Firebase
+        </button>
+        <button type="button" id="btn-save-firebase-config" class="btn btn-accent" onclick="handleSaveFirebaseConfig()">
+          💾 Guardar y Conectar
+        </button>
+      </div>
     </div>
   </div>
 
