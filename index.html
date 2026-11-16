@@ -355,7 +355,16 @@
             </div>
             <div class="form-group">
               <label for="twilio-from">Número Twilio Remitente</label>
-              <input type="text" id="twilio-from" placeholder="+34900000000">
+              <input type="text" id="twilio-from" placeholder="+15017122661">
+            </div>
+            <div class="form-group" style="display: flex; gap: 8px; align-items: flex-end;">
+              <div style="flex: 1;">
+                <label for="twilio-test-phone">Móvil de prueba</label>
+                <input type="tel" id="twilio-test-phone" placeholder="Ej. 677388168">
+              </div>
+              <button type="button" class="btn btn-secondary" onclick="handleSendTestTwilioSms(event)" style="white-space: nowrap; height: 42px;">
+                Enviar Prueba
+              </button>
             </div>
           </div>
         </div>

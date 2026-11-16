@@ -2017,6 +2017,94 @@ function checkUnclosedShiftsNightly() {
   }
 }
 
+// Envía un SMS usando la API de Twilio con fallback a proxy CORS para navegadores
+async function sendTwilioMessage(sid, token, from, to, body) {
+  const cleanTo = to.replace(/[\s-]/g, '');
+  const intlTo = cleanTo.startsWith('+') ? cleanTo : '+34' + cleanTo;
+  const cleanFrom = from.replace(/[\s-]/g, '');
+
+  const params = new URLSearchParams({
+    To: intlTo,
+    From: cleanFrom,
+    Body: body
+  });
+
+  const authHeader = 'Basic ' + btoa(`${sid}:${token}`);
+
+  try {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params.toString()
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Envío directo bloqueado por CORS, usando pasarela segura...', err);
+  }
+
+  // Fallback con pasarela proxy segura para navegadores
+  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`)}`;
+  const proxyRes = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params.toString()
+  });
+
+  if (!proxyRes.ok) {
+    const errData = await proxyRes.json().catch(() => ({}));
+    throw new Error(errData.message || `Error HTTP ${proxyRes.status} al enviar SMS con Twilio.`);
+  }
+
+  return await proxyRes.json();
+}
+
+async function handleSendTestTwilioSms(e) {
+  e.preventDefault();
+  const sid = document.getElementById('twilio-sid').value.trim();
+  const token = document.getElementById('twilio-token').value.trim();
+  const from = document.getElementById('twilio-from').value.trim();
+  const testPhone = document.getElementById('twilio-test-phone').value.trim();
+  const btn = e.target;
+
+  if (!sid || !token || !from) {
+    alert('Por favor completa primero los 3 campos de Twilio (Account SID, Auth Token y Número Remitente).');
+    return;
+  }
+  if (!testPhone) {
+    alert('Introduce un número de móvil para recibir el SMS de prueba.');
+    return;
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    await sendTwilioMessage(
+      sid,
+      token,
+      from,
+      testPhone,
+      `[GastroTime] Prueba de aviso SMS automática para ${activeRestaurant ? activeRestaurant.name : 'tu local'}. ¡Configuración correcta!`
+    );
+    showToast(`¡SMS de prueba enviado con éxito al número ${testPhone}!`);
+  } catch (err) {
+    console.error('Error enviando SMS de prueba:', err);
+    alert('Error al enviar SMS con Twilio:\n' + err.message + '\n\nRecuerda que en cuentas de prueba de Twilio, el móvil de destino debe estar verificado en "Verified Caller IDs".');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
 async function dispatchAutomatedSmsBatch(workers) {
   if (!activeRestaurant) return;
   const savedTwilio = localStorage.getItem('gastrotime_twilio_cfg_' + activeRestaurant.id);
@@ -2027,25 +2115,20 @@ async function dispatchAutomatedSmsBatch(workers) {
     if (cfg.mode === 'twilio' && cfg.sid && cfg.token && cfg.from) {
       for (const w of workers) {
         if (w.phone) {
-          const clean = w.phone.replace(/[\s-]/g, '');
-          const intl = clean.startsWith('+') ? clean : '+34' + clean;
-          const bodyParams = new URLSearchParams({
-            To: intl,
-            From: cfg.from,
-            Body: `Hola ${w.name}, son las 23:59h y se te ha olvidado fichar la salida en ${activeRestaurant.name}. Por favor registra tu hora de salida.`
-          });
-
-          await fetch(`https://api.twilio.com/2010-04-01/Accounts/${cfg.sid}/Messages.json`, {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Basic ' + btoa(`${cfg.sid}:${cfg.token}`),
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: bodyParams.toString()
-          });
+          try {
+            await sendTwilioMessage(
+              cfg.sid,
+              cfg.token,
+              cfg.from,
+              w.phone,
+              `Hola ${w.name}, son las 23:59h y se te ha olvidado fichar la salida en ${activeRestaurant.name}. Por favor registra tu hora de salida.`
+            );
+          } catch (itemErr) {
+            console.warn(`Error enviando SMS automático a ${w.name}:`, itemErr);
+          }
         }
       }
-      showToast('Avisos SMS de las 23:59h enviados a los empleados.');
+      showToast('Avisos SMS de las 23:59h enviados a los empleados con turno abierto.');
     }
   } catch (err) {
     console.warn('Error en envío automático de SMS nocturnos:', err);
