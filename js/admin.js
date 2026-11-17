@@ -489,8 +489,8 @@ async function handleSaveSettings(e) {
   const pinInput = document.getElementById('settings-admin-pin');
   const stationCheckbox = document.getElementById('settings-is-print-station');
 
-  const newName = nameInput.value.trim();
-  const newPin = pinInput.value.trim();
+  const newName = nameInput ? nameInput.value.trim() : '';
+  const newPin = pinInput ? pinInput.value.trim() : '';
 
   if (!newName) {
     alert('El nombre del restaurante no puede estar vacío.');
