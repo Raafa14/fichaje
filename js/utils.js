@@ -183,7 +183,21 @@ function showToast(message) {
   }, 3500);
 }
 
-// Prevenir zoom por doble toque y lupa en iOS Safari / PWA
+// Bloqueo y desbloqueo de desplazamiento del fondo para ventanas modales en móvil
+function lockBodyScroll() {
+  document.body.classList.add('modal-open');
+  document.documentElement.classList.add('modal-open');
+}
+
+function unlockBodyScroll() {
+  const openModal = document.querySelector('.modal-backdrop:not(.hidden)');
+  if (!openModal) {
+    document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
+  }
+}
+
+// Prevenir zoom por doble toque, lupa y desplazamientos no deseados en iOS Safari / PWA
 (function initIosZoomPrevention() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
@@ -213,6 +227,28 @@ function showToast(message) {
       const targetTag = e.target && e.target.tagName ? e.target.tagName.toUpperCase() : '';
       if (targetTag !== 'INPUT' && targetTag !== 'TEXTAREA') {
         e.preventDefault();
+      }
+    },
+    { passive: false }
+  );
+
+  // Evitar rebote o movimiento de la ventana de seguridad (PIN) o del fondo de los modales en móvil
+  document.addEventListener(
+    'touchmove',
+    (e) => {
+      if (document.body.classList.contains('modal-open')) {
+        const pinModal = document.getElementById('pin-modal');
+        if (pinModal && !pinModal.classList.contains('hidden')) {
+          // El modal de PIN es 100% estático
+          e.preventDefault();
+          return;
+        }
+
+        // Si el toque es sobre el backdrop oscuro fuera del contenido desplazable
+        const scrollable = e.target.closest('.modal-card, .modal-settings-card');
+        if (!scrollable) {
+          e.preventDefault();
+        }
       }
     },
     { passive: false }

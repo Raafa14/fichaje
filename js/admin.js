@@ -30,6 +30,7 @@ function requestAdminAccess() {
   }
 
   modal.classList.remove('hidden');
+  lockBodyScroll();
   setTimeout(() => input.focus(), 50);
 }
 
@@ -41,11 +42,13 @@ function openChangePinModal() {
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-error').classList.add('hidden');
   document.getElementById('pin-modal').classList.remove('hidden');
+  lockBodyScroll();
   setTimeout(() => document.getElementById('pin-input').focus(), 50);
 }
 
 function closePinModal() {
   document.getElementById('pin-modal').classList.add('hidden');
+  unlockBodyScroll();
   pendingActionAfterPin = null;
 }
 
@@ -465,11 +468,13 @@ function openSettingsModal() {
   if (stationCheckbox) stationCheckbox.checked = isPrintStation();
 
   modal.classList.remove('hidden');
+  lockBodyScroll();
 }
 
 function closeSettingsModal() {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.add('hidden');
+  unlockBodyScroll();
 }
 
 async function handleSaveSettings(e) {

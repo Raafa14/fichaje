@@ -220,6 +220,7 @@ async function openPrintModal(weekMonday = null) {
 
   updatePrintModalUI();
   modal.classList.remove('hidden');
+  lockBodyScroll();
 
   await populatePrintModalWeeksSelector();
 }
@@ -227,6 +228,7 @@ async function openPrintModal(weekMonday = null) {
 function closePrintModal() {
   const modal = document.getElementById('print-modal');
   if (modal) modal.classList.add('hidden');
+  unlockBodyScroll();
 }
 
 function updatePrintModalUI() {

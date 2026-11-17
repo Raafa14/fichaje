@@ -132,11 +132,13 @@ function openClockConfirmation(workerId) {
 
   timeBox.textContent = nowTime;
   document.getElementById('clock-modal').classList.remove('hidden');
+  lockBodyScroll();
 }
 
 function closeClockModal() {
   pendingWorkerId = null;
   document.getElementById('clock-modal').classList.add('hidden');
+  unlockBodyScroll();
 }
 
 async function confirmClockAction() {
