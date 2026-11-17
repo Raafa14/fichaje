@@ -354,9 +354,41 @@ input:focus, select:focus {
   color: var(--bg-dark);
 }
 
-.nav-logout {
-  background: rgba(220, 38, 38, 0.25);
-  color: #fecaca;
+/* Botón Control Semanal destacado en tono rojo */
+.nav-admin-btn,
+#nav-admin {
+  background: rgba(220, 38, 38, 0.22);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+}
+
+.nav-admin-btn .flat-svg-icon,
+#nav-admin .flat-svg-icon {
+  stroke: #f87171;
+}
+
+.nav-admin-btn:hover,
+#nav-admin:hover {
+  background: rgba(220, 38, 38, 0.38);
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+.nav-admin-btn:hover .flat-svg-icon,
+#nav-admin:hover .flat-svg-icon {
+  stroke: #ffffff;
+}
+
+.nav-admin-btn.active,
+#nav-admin.active {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+
+.nav-admin-btn.active .flat-svg-icon,
+#nav-admin.active .flat-svg-icon {
+  stroke: #ffffff !important;
 }
 
 /* --- CONTENEDOR Y TARJETAS --- */
@@ -1422,12 +1454,25 @@ input:focus, select:focus {
     stroke: var(--accent);
   }
 
-  .topbar-nav .nav-print-btn {
-    color: #fbbf24 !important;
+  .topbar-nav .nav-admin-btn,
+  .topbar-nav #nav-admin {
+    color: #f87171 !important;
   }
 
-  .topbar-nav .nav-logout {
-    color: #f87171 !important;
+  .topbar-nav .nav-admin-btn .flat-svg-icon,
+  .topbar-nav #nav-admin .flat-svg-icon {
+    stroke: #f87171 !important;
+  }
+
+  .topbar-nav .nav-admin-btn.active,
+  .topbar-nav #nav-admin.active {
+    background: rgba(220, 38, 38, 0.25) !important;
+    color: #ffffff !important;
+  }
+
+  .topbar-nav .nav-admin-btn.active .flat-svg-icon,
+  .topbar-nav #nav-admin.active .flat-svg-icon {
+    stroke: #ef4444 !important;
   }
 
   /* 3. Reloj en vivo y contadores */
