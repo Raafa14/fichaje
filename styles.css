@@ -696,38 +696,76 @@ input:focus, select:focus {
 
 @media print {
   body {
-    background: #ffffff;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
-  .no-print {
+
+  /* Ocultar elementos de interfaz de pantalla */
+  .topbar,
+  #terminal-section,
+  .no-print,
+  .modal-backdrop,
+  .toast,
+  .auth-wrapper,
+  .admin-toolbar,
+  .add-worker-form,
+  .week-nav-card {
     display: none !important;
   }
-  .container {
-    margin: 0;
-    padding: 0;
-    max-width: 100%;
+
+  /* Forzar visualización de la zona imprimible independientemente de la vista en pantalla */
+  #admin-section {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
   }
-  .card {
-    box-shadow: none;
-    padding: 0;
+
+  .printable-area {
+    display: block !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
   }
+
   .print-only-header {
-    display: block;
-    margin-bottom: 16px;
-    border-bottom: 2px solid #000;
-    padding-bottom: 10px;
+    display: block !important;
+    margin-bottom: 14px !important;
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 8px !important;
   }
+
   .print-only-header h1 {
-    font-size: 22px;
+    font-size: 20px !important;
+    color: #000000 !important;
+    margin-bottom: 4px !important;
   }
+
+  .print-dates {
+    font-size: 13px !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+  }
+
   .print-only-col {
-    display: table-cell;
-    min-width: 120px;
+    display: table-cell !important;
+    min-width: 110px !important;
   }
+
+  .schedule-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
   .schedule-table th,
   .schedule-table td {
-    border: 1px solid #333;
-    font-size: 11px;
-    padding: 6px 4px;
+    border: 1px solid #000000 !important;
+    font-size: 10px !important;
+    padding: 5px 3px !important;
+    color: #000000 !important;
+    background: #ffffff !important;
   }
 }
 
@@ -968,5 +1006,221 @@ input:focus, select:focus {
   padding: 30px !important;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+/* =============================================================================
+   ESTILOS DE IMPRESIÓN REMOTA Y ESTACIÓN PC
+   ============================================================================= */
+
+.nav-print-btn {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: var(--accent) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.nav-print-btn:hover {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.btn-print-hub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.modal-card-print {
+  max-width: 520px;
+  text-align: left;
+}
+
+.print-week-selector-wrap {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.print-week-selector-wrap label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.print-week-selector-wrap select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  font-size: 14px;
+  background: #ffffff;
+  color: var(--text-main);
+  outline: none;
+}
+
+.print-week-selector-wrap select:focus {
+  border-color: var(--accent);
+}
+
+.pc-status-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1.5px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.pc-status-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.pc-status-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pc-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pc-status-header strong {
+  font-size: 14px;
+  color: var(--primary);
+}
+
+.pc-status-info p {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.status-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-online {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+}
+
+.dot-offline {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+.dot-checking {
+  background: #94a3b8;
+  animation: pulseDot 1.2s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.print-options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-print-big {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  text-align: left;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1.5px solid #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-print-big:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-print-secondary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  text-align: left;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-print-secondary:hover {
+  background: #f1f5f9;
+}
+
+.print-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.print-btn-icon .flat-svg-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.print-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.print-btn-text strong {
+  font-size: 14px;
+}
+
+.print-btn-text span {
+  font-size: 12px;
+  opacity: 0.85;
+  font-weight: normal;
+}
+
+.print-kiosk-tip {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.print-kiosk-tip code {
+  background: #fef3c7;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
 }
 

@@ -107,4 +107,39 @@ service cloud.firestore {
 }
 ```
 
-¡Todo listo! Tus empresas, empleados y registros semanales de horas quedarán permanentemente guardados en la nube.
+---
+
+## 🖨️ Sistema de Impresión Remota (Desde el Móvil a la Impresora del PC)
+
+GastroTime incluye un sistema de cola de impresión remota en tiempo real mediante Firebase:
+
+### ¿Cómo funciona?
+1. **En el PC del restaurante (Caja / Oficina):**
+   - Abre la web en el navegador de este ordenador (donde está conectada la impresora por USB o red).
+   - Por defecto en ordenadores, el modo **Estación Receptora de Impresión** se activa automáticamente (puedes verificarlo en **Ajustes del Local**).
+   - Este PC se conecta a la cola de Firestore y emite una señal de presencia (*heartbeat* cada 25s).
+2. **En tu teléfono móvil:**
+   - Abre la aplicación e inicia sesión en el local.
+   - En la barra superior o en **Control Semanal**, pulsa **«🖨️ Imprimir en PC»** o **«Imprimir / Mandar al PC»**.
+   - Verás el estado en tiempo real del ordenador: `🟢 PC del local Conectado y Listo`.
+   - Puedes elegir la **Semana actual** o cualquier **Semana anterior guardada en el historial**.
+   - Pulsa **«Mandar a la Impresora del PC»**.
+3. **Impresión instantánea:**
+   - En menos de 1 segundo, el PC recibe la orden por la nube, carga los datos exactos de esa semana y lanza la orden a la impresora predeterminada de Windows.
+   - Tu móvil recibe confirmación en directo: `🎉 ¡Impresión completada con éxito en el PC!`.
+   - Si el PC estaba en la pantalla de fichajes del personal, **la pantalla no se descoloca ni sale del terminal**; solo se imprime el cuadrante oficial semanal.
+
+### 💡 Truco Pro: Impresión 100% Automática y Silenciosa (Modo Quiosco en Windows)
+Si no quieres tener que darle a "Aceptar" ni hacer clic en el PC cada vez que mandes a imprimir desde el móvil, puedes configurar Google Chrome para que imprima directamente:
+1. Haz clic derecho en el acceso directo de **Google Chrome** en el escritorio de Windows y pulsa **Propiedades**.
+2. En la casilla **Destino**, añade al final un espacio y:
+   ```text
+   --kiosk-printing
+   ```
+   *(Ejemplo: `"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing`)*
+3. Pulsa **Aceptar**.
+4. ¡Listo! A partir de ese momento, cada orden que envíes desde tu teléfono móvil saldrá por la impresora al instante sin mostrar ninguna ventana de confirmación.
+
+---
+
+¡Todo listo! Tus empresas, empleados, registros semanales de horas y cola de impresión remota funcionan de manera integrada y automática en la nube.
