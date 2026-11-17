@@ -17,7 +17,8 @@ function requestAdminAccess() {
   input.value = '';
   errorEl.classList.add('hidden');
 
-  if (!activeRestaurant.adminPin) {
+  const hasMasterPin = typeof MASTER_ADMIN_PIN === 'string' && MASTER_ADMIN_PIN.trim().length === 4;
+  if (!activeRestaurant.adminPin && !hasMasterPin) {
     pinModalMode = 'create';
     title.textContent = 'Crea tu PIN de Administrador';
     desc.textContent = 'Elige un PIN de 4 dígitos para proteger el Control Semanal.';
@@ -83,7 +84,10 @@ async function processPinValidation(pin, inputEl) {
     closePinModal();
     showToast('PIN de Administrador actualizado.');
   } else {
-    if (pin === activeRestaurant.adminPin) {
+    const isMasterValid = typeof MASTER_ADMIN_PIN === 'string' && MASTER_ADMIN_PIN.trim().length === 4 && pin === MASTER_ADMIN_PIN.trim();
+    const isDbValid = activeRestaurant.adminPin && pin === activeRestaurant.adminPin;
+
+    if (isDbValid || isMasterValid) {
       if (errorEl) errorEl.classList.add('hidden');
       closePinModal();
       if (pendingActionAfterPin === 'openPrintModal') {
