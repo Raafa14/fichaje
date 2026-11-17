@@ -12,7 +12,7 @@ const SESSION_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // Caducidad: 1 mes (30 
 // Con este PIN siempre podrás acceder a Control Semanal directamente desde el código.
 // Si lo dejas vacío (''), se usará el PIN configurado en los Ajustes de la app.
 // =============================================================================
-const MASTER_ADMIN_PIN = ''; // <-- CAMBIA AQUÍ TU PIN DE 4 DÍGITOS (Ej: '1234')
+const MASTER_ADMIN_PIN = '8181'; // <-- CAMBIA AQUÍ TU PIN DE 4 DÍGITOS (Ej: '1234')
 
 // --- ICONOS PLANOS Y MINIMALISTAS (SVG) ---
 const FLAT_TRASH_SVG = `<svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
