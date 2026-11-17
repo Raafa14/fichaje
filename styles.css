@@ -21,10 +21,48 @@
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background-color: var(--bg-page);
   color: var(--text-main);
   min-height: 100vh;
+  min-height: 100dvh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Evitar lupa de selección y menú emergente en botones y tarjetas al pulsar */
+button,
+a,
+.nav-btn,
+.worker-card,
+.counter-box,
+.pill-badge,
+.badge-status-pill,
+.brand-badge,
+.topbar,
+.modal-badge {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Forzar 16px en todos los inputs para evitar que iOS Safari amplíe la pantalla automáticamente */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .hidden {
@@ -1222,5 +1260,393 @@ input:focus, select:focus {
   border-radius: 4px;
   font-family: monospace;
   font-weight: 700;
+}
+
+/* =============================================================================
+   ADAPTACIÓN TOTAL PARA MÓVIL Y IPHONE (IOS / SAFARI / PWA)
+   ============================================================================= */
+
+.mobile-table-hint {
+  display: none;
+  font-size: 12px;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--accent);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  /* Espaciado del cuerpo respetando la barra inferior y área segura de iPhone */
+  body {
+    padding-bottom: calc(75px + env(safe-area-inset-bottom, 16px));
+  }
+
+  .container {
+    margin: 10px auto;
+    padding: 0 12px;
+    gap: 12px;
+  }
+
+  .card {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .card-header h3 {
+    font-size: 17px;
+  }
+
+  .card-header p {
+    font-size: 13px;
+  }
+
+  /* 1. Barra superior elegante con muesca / Dynamic Island */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 10px;
+    gap: 8px;
+  }
+
+  .topbar-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .topbar-left h2 {
+    font-size: 15px;
+    max-width: 170px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-badge {
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+
+  /* 2. Barra de navegación inferior tipo App Nativa de iOS */
+  .topbar-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0f172a;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 8px));
+    z-index: 99;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .topbar-nav .nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 10px;
+    padding: 5px 4px;
+    background: transparent !important;
+    border: none !important;
+    color: #94a3b8;
+    min-width: 48px;
+    border-radius: 8px;
+    flex: 1;
+    max-width: 72px;
+    touch-action: manipulation;
+  }
+
+  .topbar-nav .nav-btn .flat-svg-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 0 !important;
+  }
+
+  .topbar-nav .nav-btn.active {
+    color: #ffffff !important;
+    background: rgba(245, 158, 11, 0.22) !important;
+  }
+
+  .topbar-nav .nav-btn.active .flat-svg-icon {
+    stroke: var(--accent);
+  }
+
+  .topbar-nav .nav-print-btn {
+    color: #fbbf24 !important;
+  }
+
+  .topbar-nav .nav-logout {
+    color: #f87171 !important;
+  }
+
+  /* 3. Reloj en vivo y contadores */
+  .clock-banner {
+    padding: 16px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .live-clock {
+    font-size: 32px;
+    letter-spacing: -0.5px;
+  }
+
+  .status-counters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .counter-box {
+    min-width: unset;
+    padding: 10px 12px;
+  }
+
+  .counter-num {
+    font-size: 20px;
+  }
+
+  /* 4. Tarjetas de trabajadores en columna táctil */
+  .workers-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .worker-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .worker-card:active {
+    transform: scale(0.98);
+  }
+
+  /* 5. Toolbar de administración */
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .admin-toolbar > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .toolbar-actions .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 13.5px;
+  }
+
+  /* 6. Formulario añadir trabajador */
+  .add-worker-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .add-worker-form .form-group {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .add-worker-form button[type="submit"] {
+    width: 100%;
+    padding: 13px;
+    font-size: 15px;
+  }
+
+  /* 7. Navegador de semanas */
+  .week-nav-card {
+    padding: 14px;
+  }
+
+  .week-nav-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .week-title-heading {
+    font-size: 17px;
+  }
+
+  .week-nav-actions {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .week-nav-actions .btn {
+    padding: 9px 4px;
+    font-size: 11.5px;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .week-nav-actions #btn-delete-week {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+
+  .week-nav-subrow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .history-select-wrap {
+    width: 100%;
+  }
+
+  .history-select-wrap select {
+    width: 100%;
+  }
+
+  .week-hours-summary-badge {
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-size: 12.5px;
+  }
+
+  /* 8. Tabla de cuadrante semanal adaptada con columna fija */
+  .mobile-table-hint {
+    display: block;
+  }
+
+  .table-responsive {
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    max-width: 100%;
+  }
+
+  .schedule-table {
+    font-size: 12px;
+  }
+
+  .schedule-table th,
+  .schedule-table td {
+    padding: 8px 6px;
+    white-space: nowrap;
+  }
+
+  /* Columna del empleado fija al hacer scroll horizontal */
+  .schedule-table th:first-child,
+  .schedule-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: #ffffff;
+    z-index: 3;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+  }
+
+  .schedule-table thead th:first-child {
+    background: #f8fafc;
+    z-index: 4;
+  }
+
+  /* 9. Modales adaptados a pantalla pequeña y teclado */
+  .modal-backdrop {
+    padding: 12px;
+    align-items: center;
+  }
+
+  .modal-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+    max-height: calc(100dvh - 30px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-card h3 {
+    font-size: 18px;
+  }
+
+  .modal-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .modal-actions-custom {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions-custom .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pin-input {
+    width: 160px;
+    font-size: 26px;
+    letter-spacing: 8px;
+  }
+
+  /* 10. Modal de impresión */
+  .modal-card-print {
+    padding: 18px 14px;
+  }
+
+  .btn-print-big,
+  .btn-print-secondary {
+    padding: 12px 14px;
+  }
+
+  .btn-print-text strong {
+    font-size: 13.5px;
+  }
+
+  .btn-print-text span {
+    font-size: 11.5px;
+  }
+
+  /* 11. Pantalla de login / registro */
+  .auth-wrapper {
+    padding: 14px;
+    min-height: 100dvh;
+    align-items: flex-start;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  }
+
+  .auth-card {
+    border-radius: 16px;
+  }
+
+  .auth-header {
+    padding: 20px 16px 18px;
+  }
+
+  .auth-tabs button {
+    padding: 12px;
+    font-size: 13.5px;
+  }
 }
 

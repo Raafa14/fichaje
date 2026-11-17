@@ -2281,4 +2281,37 @@ async function requestRemotePrint(mondayDate) {
   }
 }
 
+// =============================================================================
+// 17. PREVENCIÓN DE ZOOM Y LUPA EN IOS / IPHONE (SAFARI & PWA STANDALONE)
+// =============================================================================
+(function initIosZoomPrevention() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  // Prevenir zoom por doble toque rápido en iOS Safari
+  let lastTouchEndTime = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEndTime <= 300) {
+      const targetTag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+      if (targetTag !== 'INPUT' && targetTag !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    }
+    lastTouchEndTime = now;
+  }, { passive: false });
+
+  // Prevenir gestos multitáctiles de pellizco (zoom)
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('gesturechange', (e) => e.preventDefault());
+  document.addEventListener('gestureend', (e) => e.preventDefault());
+
+  // Prevenir doble click estándar que invoca lupa
+  document.addEventListener('dblclick', (e) => {
+    const targetTag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+    if (targetTag !== 'INPUT' && targetTag !== 'TEXTAREA') {
+      e.preventDefault();
+    }
+  }, { passive: false });
+})();
+
 
