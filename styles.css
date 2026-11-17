@@ -1008,6 +1008,47 @@ input:focus, select:focus {
   line-height: 1.5;
 }
 
+/* Botón Cerrar Sesión en Ajustes (al final del modal) */
+.settings-logout-divider {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-logout-box {
+  margin-top: 14px;
+}
+
+.btn-settings-logout {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1.5px solid #fecaca;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-settings-logout:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
+.btn-settings-logout .flat-svg-icon {
+  stroke: #dc2626;
+}
+
+.btn-settings-logout:hover .flat-svg-icon {
+  stroke: #b91c1c;
+}
+
 /* --- ESTADOS VACÍOS (SIN TRABAJADORES) --- */
 .empty-workers-box {
   grid-column: 1 / -1;
