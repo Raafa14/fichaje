@@ -19,7 +19,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
 
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.2">
   <!-- Firebase SDK v10 (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -161,17 +161,64 @@
       </div>
 
       <!-- SUBPESTAÑAS DE CONTROL SEMANAL -->
-      <div class="admin-subtabs-bar no-print">
-        <button type="button" id="subtab-cuadrante-btn" class="admin-subtab-btn active" onclick="switchAdminSubTab('cuadrante')">
-          <svg class="flat-svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          Cuadrante Semanal
+      <div class="admin-subtabs-bar no-print" style="display:flex; gap:10px; background:#ffffff; padding:6px; border-radius:14px; border:1.5px solid var(--border, #e2e8f0); box-shadow:0 2px 8px rgba(0,0,0,0.04); margin-bottom:16px;">
+        <button type="button" id="subtab-cuadrante-btn" class="admin-subtab-btn active" onclick="switchAdminSubTab('cuadrante')" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; border:1.5px solid #0f172a; border-radius:10px; background:#0f172a; color:#ffffff; font-weight:700; font-size:14px; cursor:pointer; transition:all 0.2s ease;">
+          <svg class="flat-svg-icon" viewBox="0 0 24 24" style="width:17px; height:17px; stroke:currentColor;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>Cuadrante Semanal</span>
         </button>
-        <button type="button" id="subtab-personal-btn" class="admin-subtab-btn" onclick="switchAdminSubTab('personal')">
-          <svg class="flat-svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-          Gestión de Personal
-          <span id="badge-total-workers" class="admin-tab-count">0</span>
+        <button type="button" id="subtab-personal-btn" class="admin-subtab-btn" onclick="switchAdminSubTab('personal')" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; border:1.5px solid transparent; border-radius:10px; background:transparent; color:#64748b; font-weight:700; font-size:14px; cursor:pointer; transition:all 0.2s ease;">
+          <svg class="flat-svg-icon" viewBox="0 0 24 24" style="width:17px; height:17px; stroke:currentColor;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Personal / Trabajadores</span>
+          <span id="badge-total-workers" class="admin-tab-count" style="display:none; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 6px; font-size:12px; font-weight:800; border-radius:99px; background:#f1f5f9; color:#0f172a; margin-left:6px;"></span>
         </button>
       </div>
+
+      <script>
+        function switchAdminSubTab(tabName) {
+          var cBtn = document.getElementById('subtab-cuadrante-btn');
+          var pBtn = document.getElementById('subtab-personal-btn');
+          var cPane = document.getElementById('subtab-cuadrante-pane');
+          var pPane = document.getElementById('subtab-personal-pane');
+
+          if (tabName === 'personal') {
+            if (cBtn) {
+              cBtn.classList.remove('active');
+              cBtn.style.background = 'transparent';
+              cBtn.style.color = '#64748b';
+              cBtn.style.borderColor = 'transparent';
+            }
+            if (pBtn) {
+              pBtn.classList.add('active');
+              pBtn.style.background = '#0f172a';
+              pBtn.style.color = '#ffffff';
+              pBtn.style.borderColor = '#0f172a';
+            }
+            if (cPane) cPane.classList.add('hidden');
+            if (pPane) pPane.classList.remove('hidden');
+            if (typeof renderAdminWorkersList === 'function') {
+              renderAdminWorkersList();
+            }
+          } else {
+            if (cBtn) {
+              cBtn.classList.add('active');
+              cBtn.style.background = '#0f172a';
+              cBtn.style.color = '#ffffff';
+              cBtn.style.borderColor = '#0f172a';
+            }
+            if (pBtn) {
+              pBtn.classList.remove('active');
+              pBtn.style.background = 'transparent';
+              pBtn.style.color = '#64748b';
+              pBtn.style.borderColor = 'transparent';
+            }
+            if (cPane) cPane.classList.remove('hidden');
+            if (pPane) pPane.classList.add('hidden');
+            if (typeof renderWeeklyTable === 'function') {
+              renderWeeklyTable();
+            }
+          }
+        }
+      </script>
 
       <!-- PANEL 1: CUADRANTE SEMANAL -->
       <div id="subtab-cuadrante-pane">
@@ -498,13 +545,13 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Módulos de la Aplicación -->
-  <script src="js/utils.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/db.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/terminal.js"></script>
-  <script src="js/admin.js"></script>
-  <script src="js/print.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/utils.js?v=2.2"></script>
+  <script src="js/state.js?v=2.2"></script>
+  <script src="js/db.js?v=2.2"></script>
+  <script src="js/auth.js?v=2.2"></script>
+  <script src="js/terminal.js?v=2.2"></script>
+  <script src="js/admin.js?v=2.2"></script>
+  <script src="js/print.js?v=2.2"></script>
+  <script src="js/main.js?v=2.2"></script>
 </body>
 </html>

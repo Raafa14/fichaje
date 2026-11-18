@@ -589,7 +589,12 @@ function renderAdminWorkersList() {
   const tbody = document.getElementById('admin-workers-table-body');
   const countBadge = document.getElementById('badge-total-workers');
   if (countBadge) {
-    countBadge.textContent = currentWorkers ? currentWorkers.length : 0;
+    if (currentWorkers && currentWorkers.length > 0) {
+      countBadge.textContent = currentWorkers.length;
+      countBadge.style.display = 'inline-flex';
+    } else {
+      countBadge.style.display = 'none';
+    }
   }
   if (!tbody) return;
 
@@ -606,6 +611,9 @@ function renderAdminWorkersList() {
   }
 
   currentWorkers.forEach((worker) => {
+    if (!worker) return;
+    const workerName = worker.name ? String(worker.name) : 'Empleado';
+    const workerRole = worker.role ? String(worker.role) : 'Terraza';
     const working = typeof isWorkerWorking === 'function' ? isWorkerWorking(worker.id) : false;
     const entryTime = typeof getActiveEntryTime === 'function' ? getActiveEntryTime(worker.id) : null;
     const tr = document.createElement('tr');
@@ -618,19 +626,20 @@ function renderAdminWorkersList() {
       ? `<span class="status-tag" style="background:#d1fae5;color:#065f46;font-weight:700;">● En turno (${entryTime || ''})</span>`
       : `<span class="status-tag">Fuera de turno</span>`;
 
-    const roleClass = worker.role === 'Encargado' ? 'role-encargado' : 'role-terraza';
+    const roleClass = workerRole === 'Encargado' ? 'role-encargado' : 'role-terraza';
+    const initials = typeof getInitials === 'function' ? getInitials(workerName) : workerName.slice(0, 2).toUpperCase();
 
     tr.innerHTML = `
       <td style="text-align: left;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div class="avatar" style="width:34px;height:34px;font-size:12px;">${getInitials(worker.name)}</div>
+          <div class="avatar" style="width:34px;height:34px;font-size:12px;">${initials}</div>
           <div>
-            <strong style="color:var(--primary);font-size:14px;">${worker.name}</strong>
+            <strong style="color:var(--primary);font-size:14px;">${workerName}</strong>
           </div>
         </div>
       </td>
       <td>
-        <span class="role-badge ${roleClass}">${worker.role}</span>
+        <span class="role-badge ${roleClass}">${workerRole}</span>
       </td>
       <td>${pinDisplay}</td>
       <td>${statusDisplay}</td>
