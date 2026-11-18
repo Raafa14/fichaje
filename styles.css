@@ -1975,3 +1975,670 @@ input:focus, select:focus {
   }
 }
 
+/* =============================================================================
+   CUADRANTE DIARIO DE ZONAS, TURNOS Y EXPORTACIÓN A WHATSAPP
+   ============================================================================= */
+
+.nav-zones-btn {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+.nav-zones-btn:hover {
+  background: rgba(245, 158, 11, 0.25) !important;
+}
+
+.modal-card-zones {
+  max-width: 1080px;
+  width: 96%;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border-radius: 22px;
+  overflow-y: auto;
+}
+
+.zones-modal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.zones-header-titles h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-top: 4px;
+}
+
+.zones-date-subtitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.zones-date-picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.zones-date-input {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background: #ffffff;
+}
+
+.zones-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  margin-top: 14px;
+}
+
+.zones-template-actions,
+.zones-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-zones-wa {
+  background: #25d366 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25) !important;
+}
+
+.btn-zones-wa:hover {
+  background: #1ebd5a !important;
+}
+
+.zones-status-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.zones-subtabs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 2px;
+}
+
+.zones-subtab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  border-radius: 8px 8px 0 0;
+}
+
+.zones-subtab-btn:hover {
+  color: var(--primary);
+  background: #f1f5f9;
+}
+
+.zones-subtab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--accent);
+  background: #ffffff;
+}
+
+.zones-subtab-btn.btn-preview-tab {
+  margin-left: auto;
+  color: #3b82f6;
+}
+
+.zones-subtab-btn.btn-preview-tab.active {
+  border-bottom-color: #3b82f6;
+}
+
+/* Banner de Turno */
+.zones-shift-banner {
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+}
+
+.zones-shift-banner.shift-mediodia {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.zones-shift-banner.shift-noche {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.shift-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.shift-banner-desc {
+  font-size: 12.5px;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+/* Grid de las 3 Columnas de Zonas */
+.zones-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.zone-column-card {
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zone-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.zone-header-icon {
+  font-size: 24px;
+}
+
+.zone-header-info h4 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.zone-header-info small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.zone-positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.position-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.position-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.position-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--primary);
+}
+
+.btn-add-worker-pos {
+  background: #ffffff;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11.5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-add-worker-pos:hover {
+  background: #fffbeb;
+  border-style: solid;
+}
+
+.position-workers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.empty-pos-slot {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 8px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px dashed #e2e8f0;
+}
+
+.worker-assignment-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  position: relative;
+}
+
+.btn-remove-assignment {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-remove-assignment:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.worker-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 28px;
+}
+
+.input-worker-select,
+.input-worker-custom,
+.input-worker-hours {
+  width: 100%;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background: #fbfcfd;
+}
+
+.input-worker-custom {
+  margin-top: 4px;
+  border-color: var(--accent);
+}
+
+.quick-presets-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.preset-chip {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip:hover {
+  background: #e2e8f0;
+  color: var(--primary);
+}
+
+/* =============================================================================
+   HOJA DE CUADRANTE MINIMALISTA (ESTILO IDÉNTICO AL BOCETO, PULIDO PARA PDF)
+   ============================================================================= */
+
+.zones-preview-wrapper {
+  margin-top: 14px;
+}
+
+.zones-preview-notice {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.zones-printable-sheet {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.minimal-sheet-container {
+  background: #ffffff;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 16px 20px;
+  border: 2px solid #0f172a;
+  border-radius: 12px;
+}
+
+.minimal-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #0f172a;
+  margin-bottom: 16px;
+}
+
+.minimal-brand-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.minimal-rest-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.minimal-date-subtitle {
+  font-size: 13.5px;
+  color: #334155;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.minimal-header-legend {
+  display: flex;
+  gap: 8px;
+}
+
+.legend-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* Bloques de Turnos */
+.minimal-shift-block {
+  margin-bottom: 20px;
+}
+
+.minimal-shift-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 7px 12px;
+  border-radius: 6px 6px 0 0;
+}
+
+.minimal-shift-heading h3 {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.shift-icon-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.shift-icon-dot.sun-dot {
+  background: #f59e0b;
+}
+
+.shift-icon-dot.moon-dot {
+  background: #38bdf8;
+}
+
+.shift-time-tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* Tabla de Distribución Minimalista (Boceto en limpio) */
+.minimal-zones-table {
+  border: 1.5px solid #0f172a;
+  border-top: none;
+  background: #ffffff;
+}
+
+.minimal-table-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1.5px dashed #94a3b8;
+}
+
+.minimal-table-row.row-barras {
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: none;
+  background: #fafafa;
+}
+
+.minimal-col {
+  border-right: 1.5px dashed #94a3b8;
+  padding: 8px 10px;
+  min-height: 75px;
+  display: flex;
+  flex-direction: column;
+}
+
+.minimal-col:last-child {
+  border-right: none;
+}
+
+/* Calle destacada como en el recuadro rojo de la foto */
+.col-calle {
+  border-left: 2px solid #ef4444 !important;
+  background: #fffafa;
+}
+
+.col-head-calle .pos-name {
+  color: #b91c1c !important;
+}
+
+.col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.pos-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pos-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.worker-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  background: #ffffff;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.worker-line-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.worker-line-hours {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.empty-line {
+  color: #cbd5e1;
+  font-size: 14px;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.minimal-sheet-footer {
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 10px;
+  color: #94a3b8;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Adaptación móvil del modal de zonas */
+@media (max-width: 768px) {
+  .modal-card-zones {
+    width: 98%;
+    padding: 16px 12px;
+    max-height: 96vh;
+  }
+
+  .zones-modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .zones-date-picker-bar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .zones-date-input {
+    flex: 1;
+  }
+
+  .zones-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .zones-template-actions,
+  .zones-export-actions {
+    width: 100%;
+  }
+
+  .zones-template-actions .btn,
+  .zones-export-actions .btn {
+    flex: 1;
+  }
+
+  .zones-grid-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .minimal-table-row {
+    grid-template-columns: 1fr;
+  }
+
+  .minimal-col {
+    border-right: none;
+    border-bottom: 1px dashed #cbd5e1;
+  }
+
+  .col-calle {
+    border-left: none !important;
+    border-top: 2px solid #ef4444 !important;
+  }
+}
+
+

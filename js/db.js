@@ -729,3 +729,98 @@ async function dbClearAllWeekHours(restaurantId, weekId) {
   }
   return null;
 }
+
+// 14. Obtener Cuadrante Diario de Zonas
+async function dbGetDailyZones(restaurantId, dateKey) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    const doc = await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('daily_zones')
+      .doc(dateKey)
+      .get();
+    if (doc.exists) return doc.data();
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest && rest.dailyZones && rest.dailyZones[dateKey]) {
+    return rest.dailyZones[dateKey];
+  }
+  return null;
+}
+
+// 15. Guardar Cuadrante Diario de Zonas
+async function dbSaveDailyZones(restaurantId, dateKey, data) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('daily_zones')
+      .doc(dateKey)
+      .set(
+        {
+          ...data,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        { merge: true }
+      );
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest) {
+    if (!rest.dailyZones) rest.dailyZones = {};
+    rest.dailyZones[dateKey] = data;
+    saveLocalRestaurants(all);
+  }
+}
+
+// 16. Obtener Plantilla Predeterminada de Cuadrante de Zonas
+async function dbGetDefaultZones(restaurantId) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    const doc = await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('settings')
+      .doc('default_zones')
+      .get();
+    if (doc.exists) return doc.data();
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest && rest.defaultZones) {
+    return rest.defaultZones;
+  }
+  return null;
+}
+
+// 17. Guardar Plantilla Predeterminada de Cuadrante de Zonas
+async function dbSaveDefaultZones(restaurantId, data) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('settings')
+      .doc('default_zones')
+      .set(
+        {
+          ...data,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        { merge: true }
+      );
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest) {
+    rest.defaultZones = data;
+    saveLocalRestaurants(all);
+  }
+}
