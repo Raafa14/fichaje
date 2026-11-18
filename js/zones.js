@@ -2,64 +2,34 @@
 // GASTROTIME - CUADRANTE DIARIO DE ZONAS, TURNOS Y EXPORTACIÓN A WHATSAPP (PDF)
 // =============================================================================
 
-// Estructura de las 3 Zonas del restaurante
-const ZONES_CONFIG = [
-  {
-    id: 'terraza',
-    name: 'Zona Terraza',
-    icon: '🌿',
-    positions: [
-      { id: 'terraza', name: 'Terraza (Mesa)' },
-      { id: 'barraTerraza', name: 'Barra Terraza' }
-    ]
-  },
-  {
-    id: 'salon',
-    name: 'Zona Salón',
-    icon: '🍽️',
-    positions: [
-      { id: 'salon', name: 'Salón (Mesa)' },
-      { id: 'barraSalon', name: 'Barra Salón' }
-    ]
-  },
-  {
-    id: 'calle',
-    name: 'Zona Calle',
-    icon: '🚶‍♂️',
-    positions: [
-      { id: 'calle', name: 'Calle' }
-    ]
-  }
+// Zonas y Puestos disponibles
+const AVAILABLE_ZONES = [
+  { id: 'terraza', name: 'Terraza (Mesa)', group: 'Terraza', icon: '🌿' },
+  { id: 'barraTerraza', name: 'Barra Terraza', group: 'Terraza', icon: '🍹' },
+  { id: 'salon', name: 'Salón (Mesa)', group: 'Salón', icon: '🍽️' },
+  { id: 'barraSalon', name: 'Barra Salón', group: 'Salón', icon: '🍸' },
+  { id: 'calle', name: 'Calle', group: 'Calle', icon: '🚶‍♂️' }
 ];
 
-// Presets de horarios habituales de hostelería
-const TIME_PRESETS_MEDIODIA = ['12:00 a 18:00', '13:00 a 17:00', '12:30 a 17:30', '11:30 a 16:30'];
-const TIME_PRESETS_NOCHE = ['20:00 a 00:30', '20:30 a 01:00', '19:30 a 00:00', '21:00 a 01:30'];
+// Presets de horarios habituales
+const TIME_PRESETS_SEGUIDO = [
+  '12:00 a 18:00',
+  '13:00 a 17:00',
+  '14:00 a 00:00',
+  '19:00 a 01:00',
+  '20:00 a 00:30',
+  '20:30 a 01:30'
+];
+
+const TIME_PRESETS_PARTIDO = {
+  mediodia: ['13:00 a 16:30', '12:30 a 16:30', '13:00 a 17:00'],
+  noche: ['20:00 a 00:30', '20:30 a 01:00', '19:30 a 00:00']
+};
 
 let selectedZonesDate = new Date();
-let activeZonesShift = 'mediodia'; // 'mediodia' | 'noche' | 'preview'
-let currentZonesData = null;
-
-// Inicializa o devuelve una estructura vacía para la fecha
-function createEmptyZonesData(dateStr) {
-  return {
-    date: dateStr,
-    mediodia: {
-      terraza: [],
-      barraTerraza: [],
-      salon: [],
-      barraSalon: [],
-      calle: []
-    },
-    noche: {
-      terraza: [],
-      barraTerraza: [],
-      salon: [],
-      barraSalon: [],
-      calle: []
-    }
-  };
-}
+let activeZonesView = 'editor'; // 'editor' | 'preview'
+let currentDailyAssignments = [];
+let savedNamedTemplates = [];
 
 // Formatea fecha a YYYY-MM-DD
 function formatZonesDateKey(d) {
@@ -69,7 +39,7 @@ function formatZonesDateKey(d) {
   return `${year}-${month}-${day}`;
 }
 
-// Formatea fecha legible en español (ej: "Miércoles, 18 de Noviembre de 2026")
+// Formatea fecha legible (ej: "Miércoles, 18 de Noviembre de 2026")
 function formatZonesDateTitle(d) {
   const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const months = [
@@ -92,16 +62,18 @@ async function openZonesModal() {
   modal.classList.remove('hidden');
   lockBodyScroll();
 
+  await refreshTemplatesDropdown();
   await loadZonesForCurrentDate();
 }
 
 function closeZonesModal() {
   const modal = document.getElementById('zones-modal');
-  if (modal) modal.classList.add('hidden');
+  if (!modal) return;
+  modal.classList.add('hidden');
   unlockBodyScroll();
 }
 
-// Navegación de días en el cuadrante de zonas
+// Navegación de días
 async function navigateZonesDate(delta) {
   selectedZonesDate.setDate(selectedZonesDate.getDate() + delta);
   const dateInput = document.getElementById('zones-date-input');
@@ -129,33 +101,112 @@ async function goToZonesToday() {
   await loadZonesForCurrentDate();
 }
 
-// Cambia de pestaña interna (Mediodía / Noche / Vista Previa)
-function switchZonesShift(shift) {
-  activeZonesShift = shift;
+// Alterna entre la vista de edición única y la vista previa minimalista
+function switchZonesMainTab(tab) {
+  activeZonesView = tab;
 
-  const btnMediodia = document.getElementById('tab-zones-mediodia');
-  const btnNoche = document.getElementById('tab-zones-noche');
+  const btnEditor = document.getElementById('tab-zones-editor');
   const btnPreview = document.getElementById('tab-zones-preview');
+  const editorPane = document.getElementById('zones-editor-pane');
+  const previewPane = document.getElementById('zones-preview-wrapper');
 
-  if (btnMediodia) btnMediodia.classList.toggle('active', shift === 'mediodia');
-  if (btnNoche) btnNoche.classList.toggle('active', shift === 'noche');
-  if (btnPreview) btnPreview.classList.toggle('active', shift === 'preview');
+  if (btnEditor) btnEditor.classList.toggle('active', tab === 'editor');
+  if (btnPreview) btnPreview.classList.toggle('active', tab === 'preview');
 
-  const editorContainer = document.getElementById('zones-editor-container');
-  const previewContainer = document.getElementById('zones-preview-wrapper');
-
-  if (shift === 'preview') {
-    if (editorContainer) editorContainer.classList.add('hidden');
-    if (previewContainer) previewContainer.classList.remove('hidden');
+  if (tab === 'preview') {
+    if (editorPane) editorPane.classList.add('hidden');
+    if (previewPane) previewPane.classList.remove('hidden');
     renderZonesPreviewSheet();
   } else {
-    if (editorContainer) editorContainer.classList.remove('hidden');
-    if (previewContainer) previewContainer.classList.add('hidden');
-    renderZonesEditor();
+    if (editorPane) editorPane.classList.remove('hidden');
+    if (previewPane) previewPane.classList.add('hidden');
+    renderUnifiedZonesEditor();
   }
 }
 
-// Carga los datos de la fecha desde Firestore / LocalStorage
+// =============================================================================
+// LÓGICA AUTOMÁTICA DE CLASIFICACIÓN DE TURNOS (MEDIODÍA Y NOCHE)
+// =============================================================================
+
+function classifyAssignmentToShifts(assign) {
+  const result = {
+    mediodia: null,
+    noche: null,
+    summaryBadge: ''
+  };
+
+  if (!assign || !assign.workerName) return result;
+
+  const zone = assign.zone || 'terraza';
+
+  if (assign.shiftType === 'partido') {
+    const hMed = assign.hoursMediodia || '13:00 a 16:30';
+    const hNoc = assign.hoursNoche || '20:00 a 00:30';
+
+    result.mediodia = {
+      name: assign.workerName,
+      zone: zone,
+      hours: hMed
+    };
+    result.noche = {
+      name: assign.workerName,
+      zone: assign.zoneNoche || zone,
+      hours: hNoc
+    };
+    result.summaryBadge = '☀️ Medio Día y 🌙 Noche (Turno Partido)';
+    return result;
+  }
+
+  // Turno Seguido: analizamos hora de inicio y fin
+  const hoursStr = (assign.hours || '14:00 a 00:00').trim();
+  const match = hoursStr.match(/(\d{1,2})[:.](\d{2}).*?(\d{1,2})[:.](\d{2})/);
+
+  if (!match) {
+    result.mediodia = { name: assign.workerName, zone: zone, hours: hoursStr };
+    result.summaryBadge = '☀️ Medio Día';
+    return result;
+  }
+
+  const startHour = parseInt(match[1], 10);
+  const startMin = parseInt(match[2], 10);
+  let endHour = parseInt(match[3], 10);
+  const endMin = parseInt(match[4], 10);
+
+  // Si termina de madrugada (00:00, 01:00, 02:00...), sumamos 24 horas
+  const effectiveEndHour = endHour < startHour ? endHour + 24 : endHour;
+
+  // Umbral de cambio de turno: 19:00
+  if (startHour < 19) {
+    result.mediodia = {
+      name: assign.workerName,
+      zone: zone,
+      hours: hoursStr
+    };
+
+    // ¿Llega hasta la noche? (pasa de las 19:30 o 20:00, ej: 14:00 a 00:00)
+    if (effectiveEndHour >= 20 || (effectiveEndHour === 19 && endMin >= 30)) {
+      result.noche = {
+        name: assign.workerName,
+        zone: zone,
+        hours: hoursStr
+      };
+      result.summaryBadge = '☀️ Medio Día y 🌙 Noche (Turno Seguido)';
+    } else {
+      result.summaryBadge = '☀️ Solo Medio Día';
+    }
+  } else {
+    result.noche = {
+      name: assign.workerName,
+      zone: zone,
+      hours: hoursStr
+    };
+    result.summaryBadge = '🌙 Solo Noche';
+  }
+
+  return result;
+}
+
+// Carga las asignaciones de la fecha seleccionada
 async function loadZonesForCurrentDate() {
   if (!activeRestaurant) return;
   const dateKey = formatZonesDateKey(selectedZonesDate);
@@ -165,270 +216,446 @@ async function loadZonesForCurrentDate() {
   }
 
   try {
-    currentZonesData = await dbGetDailyZones(activeRestaurant.id, dateKey);
-    if (!currentZonesData) {
-      currentZonesData = createEmptyZonesData(dateKey);
+    const rawData = await dbGetDailyZones(activeRestaurant.id, dateKey);
+    if (rawData && Array.isArray(rawData.assignments)) {
+      currentDailyAssignments = rawData.assignments;
+    } else if (rawData && (rawData.mediodia || rawData.noche)) {
+      currentDailyAssignments = migrateOldFormatToAssignments(rawData);
+    } else {
+      currentDailyAssignments = createDefaultInitialAssignments();
     }
   } catch (err) {
     console.warn('Error al cargar cuadrante de zonas:', err);
-    currentZonesData = createEmptyZonesData(dateKey);
+    currentDailyAssignments = createDefaultInitialAssignments();
   }
 
-  if (activeZonesShift === 'preview') {
+  if (activeZonesView === 'preview') {
     renderZonesPreviewSheet();
   } else {
-    renderZonesEditor();
+    renderUnifiedZonesEditor();
   }
 }
 
-// Renderiza el editor interactivo de puestos
-function renderZonesEditor() {
-  const container = document.getElementById('zones-editor-container');
-  if (!container || !currentZonesData) return;
+function createDefaultInitialAssignments() {
+  if (!currentWorkers || currentWorkers.length === 0) return [];
+  return [
+    {
+      id: 'a_' + Date.now(),
+      workerName: currentWorkers[0].name,
+      zone: 'terraza',
+      shiftType: 'seguido',
+      hours: '14:00 a 00:00'
+    }
+  ];
+}
 
-  const shiftData = currentZonesData[activeZonesShift] || {};
-  const isMediodia = activeZonesShift === 'mediodia';
-  const defaultHours = isMediodia ? 'De 12:00 a 18:00' : 'De 20:00 a 00:30';
-  const presets = isMediodia ? TIME_PRESETS_MEDIODIA : TIME_PRESETS_NOCHE;
+function migrateOldFormatToAssignments(oldData) {
+  const list = [];
+  const addFromShift = (shiftObj) => {
+    if (!shiftObj) return;
+    Object.keys(shiftObj).forEach((posId) => {
+      (shiftObj[posId] || []).forEach((w) => {
+        if (!w || !w.name) return;
+        list.push({
+          id: 'a_' + Math.random().toString(36).substr(2, 9),
+          workerName: w.name,
+          zone: posId,
+          shiftType: 'seguido',
+          hours: w.hours || '12:00 a 18:00'
+        });
+      });
+    });
+  };
+  addFromShift(oldData.mediodia);
+  addFromShift(oldData.noche);
+  return list;
+}
+
+// =============================================================================
+// RENDERIZADO DEL EDITOR UNIFICADO (1 SOLO APARTADO SIMPLE Y DIRECTO)
+// =============================================================================
+
+function renderUnifiedZonesEditor() {
+  const container = document.getElementById('zones-editor-pane');
+  if (!container) return;
+
+  const totalWorkers = currentDailyAssignments.length;
 
   let html = `
-    <div class="zones-shift-banner ${isMediodia ? 'shift-mediodia' : 'shift-noche'}">
-      <div class="shift-banner-title">
-        <span>${isMediodia ? '☀️' : '🌙'}</span>
-        <strong>Turno de ${isMediodia ? 'Mediodía (Comida)' : 'Noche (Cena)'}</strong>
+    <div class="unified-editor-header">
+      <div class="editor-header-info">
+        <h4>Lista de Camareros y Horarios del Día</h4>
+        <p>Elige al camarero, su zona y su horario (seguido o partido). El sistema lo colocará <strong>automáticamente en Mediodía y Noche</strong>.</p>
       </div>
-      <p class="shift-banner-desc">
-        Asigna el personal que cubrirá Terraza, Salón y Calle para este turno.
-      </p>
+      <button type="button" class="btn btn-accent btn-sm" onclick="handleAddNewAssignmentRow()">
+        + Añadir Camarero al Cuadrante
+      </button>
     </div>
-    <div class="zones-grid-layout">
+
+    <div class="assignments-cards-list" id="assignments-cards-list">
   `;
 
-  ZONES_CONFIG.forEach((zone) => {
+  if (totalWorkers === 0) {
     html += `
-      <div class="zone-column-card">
-        <div class="zone-card-header">
-          <span class="zone-header-icon">${zone.icon}</span>
-          <div class="zone-header-info">
-            <h4>${zone.name}</h4>
-            <small>${zone.positions.length > 1 ? 'Mesa y Barra' : 'Exterior'}</small>
-          </div>
-        </div>
-        <div class="zone-positions-list">
+      <div class="empty-assignments-notice">
+        <p>No hay camareros asignados en este día todavía.</p>
+        <button type="button" class="btn btn-outline btn-sm" onclick="handleAddNewAssignmentRow()">
+          + Añadir Primer Camarero
+        </button>
+      </div>
     `;
-
-    zone.positions.forEach((pos) => {
-      const list = shiftData[pos.id] || [];
+  } else {
+    currentDailyAssignments.forEach((assign, index) => {
+      const isPartido = assign.shiftType === 'partido';
+      const classified = classifyAssignmentToShifts(assign);
 
       html += `
-        <div class="position-block">
-          <div class="position-header">
-            <span class="position-title">${pos.name}</span>
-            <button type="button" class="btn-add-worker-pos" onclick="handleAddWorkerToZone('${activeZonesShift}', '${pos.id}')" title="Añadir trabajador a ${pos.name}">
-              + Asignar Camarero/a
+        <div class="assignment-card-item">
+          <div class="assignment-card-top">
+            <span class="assignment-number-badge">#${index + 1}</span>
+            
+            <!-- Selector de Camarero -->
+            <div class="field-item worker-field">
+              <label>Camarero/a:</label>
+              <select class="input-select-worker" onchange="handleAssignmentChange(${index}, 'workerName', this.value)">
+                <option value="">-- Seleccionar camarero --</option>
+                ${(currentWorkers || []).map((w) => `<option value="${w.name}" ${assign.workerName === w.name ? 'selected' : ''}>${w.name} (${w.role})</option>`).join('')}
+                <option value="__custom__" ${assign.isCustom ? 'selected' : ''}>+ Escribir otro nombre...</option>
+              </select>
+              ${assign.isCustom ? `
+                <input type="text" class="input-worker-custom" placeholder="Nombre del trabajador/extra" value="${assign.workerName || ''}" onchange="handleAssignmentChange(${index}, 'customWorkerName', this.value)">
+              ` : ''}
+            </div>
+
+            <!-- Selector de Zona (Salon, Terraza, Calle) -->
+            <div class="field-item zone-field">
+              <label>Zona / Puesto:</label>
+              <select class="input-select-zone" onchange="handleAssignmentChange(${index}, 'zone', this.value)">
+                ${AVAILABLE_ZONES.map((z) => `<option value="${z.id}" ${assign.zone === z.id ? 'selected' : ''}>${z.icon} ${z.name}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Tipo de Turno (Seguido / Partido) -->
+            <div class="field-item shift-type-field">
+              <label>Tipo de Turno:</label>
+              <div class="shift-type-pills">
+                <button type="button" class="type-pill ${!isPartido ? 'active' : ''}" onclick="handleAssignmentChange(${index}, 'shiftType', 'seguido')">
+                  Turno Seguido
+                </button>
+                <button type="button" class="type-pill ${isPartido ? 'active' : ''}" onclick="handleAssignmentChange(${index}, 'shiftType', 'partido')">
+                  Turno Partido
+                </button>
+              </div>
+            </div>
+
+            <!-- Botón Eliminar fila -->
+            <button type="button" class="btn-remove-card" onclick="handleRemoveAssignmentRow(${index})" title="Quitar este camarero del cuadrante">
+              ✕
             </button>
           </div>
-          <div class="position-workers-list">
+
+          <!-- Bloque de Horarios -->
+          <div class="assignment-hours-block">
       `;
 
-      if (list.length === 0) {
+      if (!isPartido) {
         html += `
-          <div class="empty-pos-slot">
-            <span>Sin personal asignado</span>
+          <div class="hours-row-seguido">
+            <div class="hours-input-wrap">
+              <label>Horario completo (ej: 14:00 a 00:00 o 12:00 a 18:00):</label>
+              <input type="text" class="input-hours" placeholder="Ej: 14:00 a 00:00" value="${assign.hours || ''}" onchange="handleAssignmentChange(${index}, 'hours', this.value)">
+            </div>
+            <div class="hours-quick-presets">
+              <span>Atajos de 1 clic:</span>
+              ${TIME_PRESETS_SEGUIDO.map((p) => `
+                <button type="button" class="btn-preset-chip" onclick="handleApplyHoursPreset(${index}, 'hours', '${p}')">${p}</button>
+              `).join('')}
+            </div>
           </div>
         `;
       } else {
-        list.forEach((worker, index) => {
-          html += `
-            <div class="worker-assignment-row">
-              <div class="worker-select-wrap">
-                <select class="input-worker-select" onchange="handleUpdateWorkerAssignment('${activeZonesShift}', '${pos.id}', ${index}, 'name', this.value)">
-                  <option value="">-- Elige trabajador --</option>
-                  ${(currentWorkers || []).map((w) => `<option value="${w.name}" ${worker.name === w.name ? 'selected' : ''}>${w.name} (${w.role})</option>`).join('')}
-                  <option value="__custom__" ${worker.isCustom ? 'selected' : ''}>+ Escribir otro nombre...</option>
-                </select>
-                ${worker.isCustom ? `
-                  <input type="text" class="input-worker-custom" placeholder="Nombre del trabajador/extra" value="${worker.name || ''}" onchange="handleUpdateWorkerAssignment('${activeZonesShift}', '${pos.id}', ${index}, 'customName', this.value)">
-                ` : ''}
+        html += `
+          <div class="hours-row-partido">
+            <div class="partido-col">
+              <label>☀️ Horario Mediodía (Comida):</label>
+              <input type="text" class="input-hours" placeholder="13:00 a 16:30" value="${assign.hoursMediodia || '13:00 a 16:30'}" onchange="handleAssignmentChange(${index}, 'hoursMediodia', this.value)">
+              <div class="hours-quick-presets">
+                ${TIME_PRESETS_PARTIDO.mediodia.map((p) => `
+                  <button type="button" class="btn-preset-chip" onclick="handleApplyHoursPreset(${index}, 'hoursMediodia', '${p}')">${p}</button>
+                `).join('')}
               </div>
-              <div class="worker-hours-wrap">
-                <input type="text" class="input-worker-hours" placeholder="${defaultHours}" value="${worker.hours || ''}" onchange="handleUpdateWorkerAssignment('${activeZonesShift}', '${pos.id}', ${index}, 'hours', this.value)">
-                <div class="quick-presets-chips">
-                  ${presets.map((p) => `
-                    <button type="button" class="preset-chip" onclick="handleApplyTimePreset('${activeZonesShift}', '${pos.id}', ${index}, '${p}')">${p.replace('De ', '')}</button>
-                  `).join('')}
-                </div>
-              </div>
-              <button type="button" class="btn-remove-assignment" onclick="handleRemoveWorkerFromZone('${activeZonesShift}', '${pos.id}', ${index})" title="Quitar asignación">
-                ✕
-              </button>
             </div>
-          `;
-        });
+            <div class="partido-col">
+              <label>🌙 Horario Noche (Cena):</label>
+              <input type="text" class="input-hours" placeholder="20:00 a 00:30" value="${assign.hoursNoche || '20:00 a 00:30'}" onchange="handleAssignmentChange(${index}, 'hoursNoche', this.value)">
+              <div class="hours-quick-presets">
+                ${TIME_PRESETS_PARTIDO.noche.map((p) => `
+                  <button type="button" class="btn-preset-chip" onclick="handleApplyHoursPreset(${index}, 'hoursNoche', '${p}')">${p}</button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
       }
 
       html += `
+            <!-- Indicador automático de reparto -->
+            <div class="auto-classification-tag">
+              <span class="tag-icon">⚡</span>
+              <span>Distribución en el cuadrante:</span>
+              <strong>${classified.summaryBadge}</strong>
+            </div>
           </div>
         </div>
       `;
     });
+  }
 
-    html += `
-        </div>
-      </div>
-    `;
-  });
+  html += `
+    </div>
+    <div class="unified-editor-bottom">
+      <button type="button" class="btn btn-outline btn-full-add" onclick="handleAddNewAssignmentRow()">
+        + Añadir Otro Camarero al Cuadrante
+      </button>
+    </div>
+  `;
 
-  html += `</div>`;
   container.innerHTML = html;
 }
 
-// Añade un nuevo slot de trabajador a una posición
-async function handleAddWorkerToZone(shift, posId) {
-  if (!currentZonesData || !currentZonesData[shift]) return;
-  if (!currentZonesData[shift][posId]) {
-    currentZonesData[shift][posId] = [];
-  }
+// Añade una nueva fila al cuadrante
+async function handleAddNewAssignmentRow() {
+  const availableWorker = (currentWorkers || []).find(
+    (w) => !currentDailyAssignments.some((a) => a.workerName === w.name)
+  );
+  const defaultName = availableWorker ? availableWorker.name : ((currentWorkers && currentWorkers[0]) ? currentWorkers[0].name : '');
 
-  const defaultHours = shift === 'mediodia' ? 'De 12:00 a 18:00' : 'De 20:00 a 00:30';
-
-  // Si hay trabajadores no asignados aún en este turno, sugerir el primero
-  const assignedInShift = new Set();
-  Object.values(currentZonesData[shift]).forEach((arr) => {
-    (arr || []).forEach((item) => {
-      if (item && item.name) assignedInShift.add(item.name.trim().toLowerCase());
-    });
+  currentDailyAssignments.push({
+    id: 'a_' + Date.now(),
+    workerName: defaultName,
+    zone: 'terraza',
+    shiftType: 'seguido',
+    hours: '14:00 a 00:00',
+    hoursMediodia: '13:00 a 16:30',
+    hoursNoche: '20:00 a 00:30'
   });
 
-  const availableWorker = (currentWorkers || []).find((w) => !assignedInShift.has(w.name.trim().toLowerCase()));
-  const initialName = availableWorker ? availableWorker.name : ((currentWorkers && currentWorkers[0]) ? currentWorkers[0].name : '');
-
-  currentZonesData[shift][posId].push({
-    name: initialName,
-    hours: defaultHours,
-    isCustom: false
-  });
-
-  renderZonesEditor();
-  await autoSaveCurrentZonesData();
+  renderUnifiedZonesEditor();
+  await autoSaveCurrentDailyAssignments();
 }
 
-// Modifica la asignación de un trabajador
-async function handleUpdateWorkerAssignment(shift, posId, index, field, value) {
-  if (!currentZonesData || !currentZonesData[shift] || !currentZonesData[shift][posId]) return;
-  const item = currentZonesData[shift][posId][index];
+// Modifica campos de una asignación
+async function handleAssignmentChange(index, field, value) {
+  const item = currentDailyAssignments[index];
   if (!item) return;
 
-  if (field === 'name') {
+  if (field === 'workerName') {
     if (value === '__custom__') {
       item.isCustom = true;
-      item.name = '';
+      item.workerName = '';
     } else {
       item.isCustom = false;
-      item.name = value;
+      item.workerName = value;
     }
-  } else if (field === 'customName') {
-    item.name = value.trim();
+  } else if (field === 'customWorkerName') {
+    item.workerName = value.trim();
+  } else if (field === 'zone') {
+    item.zone = value;
+  } else if (field === 'shiftType') {
+    item.shiftType = value;
+    if (value === 'partido') {
+      if (!item.hoursMediodia) item.hoursMediodia = '13:00 a 16:30';
+      if (!item.hoursNoche) item.hoursNoche = '20:00 a 00:30';
+    } else {
+      if (!item.hours) item.hours = '14:00 a 00:00';
+    }
   } else if (field === 'hours') {
     item.hours = value.trim();
+  } else if (field === 'hoursMediodia') {
+    item.hoursMediodia = value.trim();
+  } else if (field === 'hoursNoche') {
+    item.hoursNoche = value.trim();
   }
 
-  renderZonesEditor();
-  await autoSaveCurrentZonesData();
+  renderUnifiedZonesEditor();
+  await autoSaveCurrentDailyAssignments();
 }
 
-// Aplica preset rápido de hora
-async function handleApplyTimePreset(shift, posId, index, preset) {
-  if (!currentZonesData || !currentZonesData[shift] || !currentZonesData[shift][posId]) return;
-  const item = currentZonesData[shift][posId][index];
+// Aplica preset rápido de horas
+async function handleApplyHoursPreset(index, field, preset) {
+  const item = currentDailyAssignments[index];
   if (!item) return;
-
-  item.hours = preset;
-  renderZonesEditor();
-  await autoSaveCurrentZonesData();
+  item[field] = preset;
+  renderUnifiedZonesEditor();
+  await autoSaveCurrentDailyAssignments();
 }
 
-// Quita un trabajador de la posición
-async function handleRemoveWorkerFromZone(shift, posId, index) {
-  if (!currentZonesData || !currentZonesData[shift] || !currentZonesData[shift][posId]) return;
-  currentZonesData[shift][posId].splice(index, 1);
-  renderZonesEditor();
-  await autoSaveCurrentZonesData();
+// Elimina una fila del cuadrante
+async function handleRemoveAssignmentRow(index) {
+  currentDailyAssignments.splice(index, 1);
+  renderUnifiedZonesEditor();
+  await autoSaveCurrentDailyAssignments();
 }
 
-// Guardado automático del cuadrante del día
-async function autoSaveCurrentZonesData() {
-  if (!activeRestaurant || !currentZonesData) return;
+// Guardado automático en Firebase / LocalStorage
+async function autoSaveCurrentDailyAssignments() {
+  if (!activeRestaurant) return;
   try {
     const dateKey = formatZonesDateKey(selectedZonesDate);
-    await dbSaveDailyZones(activeRestaurant.id, dateKey, currentZonesData);
+    await dbSaveDailyZones(activeRestaurant.id, dateKey, {
+      date: dateKey,
+      assignments: currentDailyAssignments
+    });
   } catch (err) {
-    console.warn('Error guardando cuadrante:', err);
+    console.warn('Error al autoguardar cuadrante:', err);
   }
 }
 
-// Guarda la configuración actual como plantilla predeterminada
-async function handleSaveAsDefaultZones() {
-  if (!activeRestaurant || !currentZonesData) return;
+// =============================================================================
+// GESTIÓN DE PLANTILLAS CON NOMBRE (GUARDAR Y CARGAR POR NOMBRE)
+// =============================================================================
 
-  const confirmed = confirm(
-    '¿Deseas guardar la distribución y horarios actuales como TU PLANTILLA PREDETERMINADA?\n\nPodrás cargarla en cualquier día con un solo clic.'
-  );
-  if (!confirmed) return;
+// Refresca el desplegable de plantillas guardadas con su nombre
+async function refreshTemplatesDropdown() {
+  if (!activeRestaurant) return;
+  const select = document.getElementById('zones-named-template-select');
+  if (!select) return;
 
   try {
-    await dbSaveDefaultZones(activeRestaurant.id, currentZonesData);
-    showToast('Plantilla predeterminada guardada correctamente.');
+    savedNamedTemplates = await dbGetNamedTemplates(activeRestaurant.id);
+    select.innerHTML = '<option value="">-- Elige una plantilla guardada --</option>';
+
+    savedNamedTemplates.forEach((tpl) => {
+      const count = (tpl.assignments || []).length;
+      const opt = document.createElement('option');
+      opt.value = tpl.id || tpl.name;
+      opt.textContent = `📋 ${tpl.name} (${count} camareros)`;
+      select.appendChild(opt);
+    });
   } catch (err) {
-    console.error('Error guardando plantilla predeterminada:', err);
+    console.warn('Error cargando plantillas con nombre:', err);
+  }
+}
+
+// Guarda el cuadrante actual con un nombre de plantilla
+async function handleSaveNamedTemplate() {
+  if (!activeRestaurant) return;
+  if (currentDailyAssignments.length === 0) {
+    alert('Añade al menos un camarero al cuadrante antes de guardarlo como plantilla.');
+    return;
+  }
+
+  const templateName = prompt(
+    'Introduce un nombre para guardar esta plantilla:\n\nEjemplos: "Fin de Semana", "Lunes a Jueves", "Viernes Noche", "Plantilla Verano"...'
+  );
+  if (!templateName || !templateName.trim()) return;
+
+  try {
+    await dbSaveNamedTemplate(activeRestaurant.id, templateName.trim(), {
+      name: templateName.trim(),
+      assignments: currentDailyAssignments
+    });
+    await refreshTemplatesDropdown();
+
+    const select = document.getElementById('zones-named-template-select');
+    if (select) select.value = templateName.trim();
+
+    showToast(`Plantilla "${templateName.trim()}" guardada con éxito.`);
+  } catch (err) {
+    console.error('Error guardando plantilla con nombre:', err);
     showToast('Error al guardar plantilla: ' + err.message);
   }
 }
 
-// Carga la plantilla predeterminada en el día actual
-async function handleLoadDefaultZones() {
-  if (!activeRestaurant) return;
+// Carga la plantilla seleccionada en el desplegable
+async function handleLoadSelectedNamedTemplate() {
+  const select = document.getElementById('zones-named-template-select');
+  if (!select || !select.value) {
+    alert('Por favor, selecciona una plantilla del desplegable para cargar.');
+    return;
+  }
+
+  const tplName = select.value;
+  const tpl = savedNamedTemplates.find((t) => (t.id === tplName || t.name === tplName));
+  if (!tpl) return;
 
   const confirmed = confirm(
-    '¿Deseas cargar la plantilla predeterminada en este día?\n\nEsto rellenará los puestos y horarios con tu cuadrante habitual.'
+    `¿Deseas cargar la plantilla "${tpl.name}" en el día de hoy?\n\nEsto rellenará el cuadrante con los ${tpl.assignments.length} camareros guardados.`
   );
   if (!confirmed) return;
 
+  currentDailyAssignments = JSON.parse(JSON.stringify(tpl.assignments || []));
+  await autoSaveCurrentDailyAssignments();
+  renderUnifiedZonesEditor();
+  showToast(`Plantilla "${tpl.name}" cargada correctamente.`);
+}
+
+// Elimina la plantilla seleccionada
+async function handleDeleteSelectedNamedTemplate() {
+  const select = document.getElementById('zones-named-template-select');
+  if (!select || !select.value) {
+    alert('Selecciona la plantilla que deseas eliminar en el desplegable.');
+    return;
+  }
+
+  const tplName = select.value;
+  const confirmed = confirm(`¿Estás seguro de que deseas eliminar permanentemente la plantilla "${tplName}"?`);
+  if (!confirmed) return;
+
   try {
-    const defaultData = await dbGetDefaultZones(activeRestaurant.id);
-    if (!defaultData) {
-      alert('Aún no has guardado ninguna plantilla predeterminada. Configura un día y pulsa "💾 Guardar como Predeterminado".');
-      return;
-    }
-
-    const dateKey = formatZonesDateKey(selectedZonesDate);
-    currentZonesData = JSON.parse(JSON.stringify(defaultData));
-    currentZonesData.date = dateKey;
-
-    await autoSaveCurrentZonesData();
-    switchZonesShift(activeZonesShift);
-    showToast('Plantilla predeterminada cargada con éxito.');
+    await dbDeleteNamedTemplate(activeRestaurant.id, tplName);
+    await refreshTemplatesDropdown();
+    showToast(`Plantilla "${tplName}" eliminada.`);
   } catch (err) {
-    console.error('Error cargando plantilla predeterminada:', err);
-    showToast('Error al cargar plantilla: ' + err.message);
+    console.error('Error eliminando plantilla:', err);
+    showToast('Error al eliminar plantilla: ' + err.message);
   }
 }
 
 // =============================================================================
-// RENDERIZADO DEL CUADRANTE MINIMALISTA (ESTILO EXACTO A LA FOTO, ELEGANTE)
+// RENDERIZADO DE LA HOJA MINIMALISTA (ESTILO EXACTO A LA FOTO PARA PDF Y WHATSAPP)
 // =============================================================================
 
 function renderZonesPreviewSheet() {
   const container = document.getElementById('zones-printable-sheet');
-  if (!container || !currentZonesData) return;
+  if (!container) return;
 
   const restName = activeRestaurant ? activeRestaurant.name : 'Restaurante';
   const dateStr = formatZonesDateTitle(selectedZonesDate);
 
-  const med = currentZonesData.mediodia || {};
-  const noc = currentZonesData.noche || {};
+  // Clasificar cada camarero automáticamente a Mediodía y Noche
+  const mediodiaShift = {
+    terraza: [],
+    barraTerraza: [],
+    salon: [],
+    barraSalon: [],
+    calle: []
+  };
 
-  // Formato similar al boceto original pero con diseño limpio y minimalista
+  const nocheShift = {
+    terraza: [],
+    barraTerraza: [],
+    salon: [],
+    barraSalon: [],
+    calle: []
+  };
+
+  currentDailyAssignments.forEach((assign) => {
+    const classified = classifyAssignmentToShifts(assign);
+
+    if (classified.mediodia) {
+      const z = classified.mediodia.zone || 'terraza';
+      if (!mediodiaShift[z]) mediodiaShift[z] = [];
+      mediodiaShift[z].push(classified.mediodia);
+    }
+
+    if (classified.noche) {
+      const z = classified.noche.zone || 'terraza';
+      if (!nocheShift[z]) nocheShift[z] = [];
+      nocheShift[z].push(classified.noche);
+    }
+  });
+
   container.innerHTML = `
     <div class="minimal-sheet-container">
       <div class="minimal-sheet-header">
@@ -440,28 +667,28 @@ function renderZonesPreviewSheet() {
         <div class="minimal-header-legend">
           <span class="legend-badge">🌿 Terraza & Barra</span>
           <span class="legend-badge">🍽️ Salón & Barra</span>
-          <span class="legend-badge">🚶‍♂️ Calle</span>
+          <span class="legend-badge legend-calle">🚶‍♂️ Calle</span>
         </div>
       </div>
 
-      <!-- TURNO MEDIODÍA -->
+      <!-- TURNO MEDIO DÍA -->
       <div class="minimal-shift-block">
         <div class="minimal-shift-heading">
           <span class="shift-icon-dot sun-dot"></span>
-          <h3>TURNO MEDIO DÍA</h3>
-          <span class="shift-time-tag">Comidas</span>
+          <h3>**Medio Dia**</h3>
+          <span class="shift-time-tag">Comidas (hasta las 19:00 / 20:00)</span>
         </div>
-        ${buildMinimalShiftTableHtml(med)}
+        ${buildMinimalShiftTableHtml(mediodiaShift)}
       </div>
 
       <!-- TURNO NOCHE -->
       <div class="minimal-shift-block">
         <div class="minimal-shift-heading">
           <span class="shift-icon-dot moon-dot"></span>
-          <h3>TURNO NOCHE</h3>
-          <span class="shift-time-tag">Cenas</span>
+          <h3>**Noche**</h3>
+          <span class="shift-time-tag">Cenas (desde las 19:00 / 20:00)</span>
         </div>
-        ${buildMinimalShiftTableHtml(noc)}
+        ${buildMinimalShiftTableHtml(nocheShift)}
       </div>
 
       <div class="minimal-sheet-footer">
@@ -471,7 +698,7 @@ function renderZonesPreviewSheet() {
   `;
 }
 
-// Construye la tabla minimalista de 3 columnas (Terraza, Salón, Calle) similar al boceto
+// Construye la tabla minimalista exacta a la foto: Terraza | Salon | Calle lateral
 function buildMinimalShiftTableHtml(shiftObj) {
   const tMesa = shiftObj.terraza || [];
   const tBarra = shiftObj.barraTerraza || [];
@@ -481,7 +708,7 @@ function buildMinimalShiftTableHtml(shiftObj) {
 
   return `
     <div class="minimal-zones-table">
-      <!-- Fila Superior: Terraza (Mesa), Salón (Mesa) y Calle -->
+      <!-- Fila 1: Terraza (Mesa), Salón (Mesa) y Columna Calle lateral -->
       <div class="minimal-table-row">
         <!-- Columna 1: Terraza -->
         <div class="minimal-col col-terraza">
@@ -497,7 +724,7 @@ function buildMinimalShiftTableHtml(shiftObj) {
         <!-- Columna 2: Salón -->
         <div class="minimal-col col-salon">
           <div class="col-head">
-            <span class="pos-name">Salón</span>
+            <span class="pos-name">Salon</span>
             <span class="pos-sub">Hora</span>
           </div>
           <div class="col-body">
@@ -505,8 +732,8 @@ function buildMinimalShiftTableHtml(shiftObj) {
           </div>
         </div>
 
-        <!-- Columna 3: Calle (Abarca lateralmente) -->
-        <div class="minimal-col col-calle">
+        <!-- Columna 3: Calle (Abarca lateralmente como en el recuadro rojo de la foto) -->
+        <div class="minimal-col col-calle col-calle-span2">
           <div class="col-head col-head-calle">
             <span class="pos-name">Calle</span>
             <span class="pos-sub">Hora</span>
@@ -517,7 +744,7 @@ function buildMinimalShiftTableHtml(shiftObj) {
         </div>
       </div>
 
-      <!-- Fila Inferior: Barra Terraza y Barra Salón -->
+      <!-- Fila 2: Barra Terraza y Barra Salón -->
       <div class="minimal-table-row row-barras">
         <div class="minimal-col col-terraza col-barra">
           <div class="col-head">
@@ -531,12 +758,16 @@ function buildMinimalShiftTableHtml(shiftObj) {
 
         <div class="minimal-col col-salon col-barra">
           <div class="col-head">
-            <span class="pos-name">Barra Salón</span>
+            <span class="pos-name">Barra Salon</span>
             <span class="pos-sub">Hora</span>
           </div>
           <div class="col-body">
             ${renderWorkersLinesHtml(sBarra)}
           </div>
+        </div>
+
+        <!-- Columna 3: Continuación lateral Calle -->
+        <div class="minimal-col col-calle col-calle-continuation">
         </div>
       </div>
     </div>
@@ -551,7 +782,7 @@ function renderWorkersLinesHtml(workersList) {
     .map((w) => `
       <div class="worker-line">
         <strong class="worker-line-name">${w.name || 'Sin asignar'}</strong>
-        <span class="worker-line-hours">${w.hours || 'Horario a concretar'}</span>
+        <span class="worker-line-hours">${w.hours || 'Horario'}</span>
       </div>
     `)
     .join('');
@@ -559,45 +790,60 @@ function renderWorkersLinesHtml(workersList) {
 
 // Genera texto resumen para WhatsApp
 function generateWhatsappText() {
-  if (!currentZonesData) return '';
   const restName = activeRestaurant ? activeRestaurant.name : 'Restaurante';
   const dateStr = formatZonesDateTitle(selectedZonesDate);
 
-  let text = `📋 *CUADRANTE DE PUESTOS Y TURNOS*\n`;
-  text += `🏨 *${restName}*\n`;
-  text += `📅 ${dateStr}\n\n`;
+  const mediodiaShift = { terraza: [], barraTerraza: [], salon: [], barraSalon: [], calle: [] };
+  const nocheShift = { terraza: [], barraTerraza: [], salon: [], barraSalon: [], calle: [] };
+
+  currentDailyAssignments.forEach((assign) => {
+    const classified = classifyAssignmentToShifts(assign);
+    if (classified.mediodia) {
+      const z = classified.mediodia.zone || 'terraza';
+      if (!mediodiaShift[z]) mediodiaShift[z] = [];
+      mediodiaShift[z].push(classified.mediodia);
+    }
+    if (classified.noche) {
+      const z = classified.noche.zone || 'terraza';
+      if (!nocheShift[z]) nocheShift[z] = [];
+      nocheShift[z].push(classified.noche);
+    }
+  });
 
   const formatList = (arr) => {
     if (!arr || arr.length === 0) return '  _(Sin asignar)_';
     return arr.map((w) => `  • *${w.name}*: ${w.hours}`).join('\n');
   };
 
+  let text = `📋 *CUADRANTE DE ZONAS Y PUESTOS*\n`;
+  text += `🏨 *${restName}*\n`;
+  text += `📅 ${dateStr}\n\n`;
+
   // Mediodía
   text += `☀️ *--- TURNO MEDIO DÍA ---*\n`;
-  text += `🌿 *Terraza:*\n${formatList(currentZonesData.mediodia.terraza)}\n`;
-  text += `🍹 *Barra Terraza:*\n${formatList(currentZonesData.mediodia.barraTerraza)}\n`;
-  text += `🍽️ *Salón:*\n${formatList(currentZonesData.mediodia.salon)}\n`;
-  text += `🍸 *Barra Salón:*\n${formatList(currentZonesData.mediodia.barraSalon)}\n`;
-  text += `🚶‍♂️ *Calle:*\n${formatList(currentZonesData.mediodia.calle)}\n\n`;
+  text += `🌿 *Terraza:*\n${formatList(mediodiaShift.terraza)}\n`;
+  text += `🍹 *Barra Terraza:*\n${formatList(mediodiaShift.barraTerraza)}\n`;
+  text += `🍽️ *Salón:*\n${formatList(mediodiaShift.salon)}\n`;
+  text += `🍸 *Barra Salón:*\n${formatList(mediodiaShift.barraSalon)}\n`;
+  text += `🚶‍♂️ *Calle:*\n${formatList(mediodiaShift.calle)}\n\n`;
 
   // Noche
   text += `🌙 *--- TURNO NOCHE ---*\n`;
-  text += `🌿 *Terraza:*\n${formatList(currentZonesData.noche.terraza)}\n`;
-  text += `🍹 *Barra Terraza:*\n${formatList(currentZonesData.noche.barraTerraza)}\n`;
-  text += `🍽️ *Salón:*\n${formatList(currentZonesData.noche.salon)}\n`;
-  text += `🍸 *Barra Salón:*\n${formatList(currentZonesData.noche.barraSalon)}\n`;
-  text += `🚶‍♂️ *Calle:*\n${formatList(currentZonesData.noche.calle)}\n\n`;
+  text += `🌿 *Terraza:*\n${formatList(nocheShift.terraza)}\n`;
+  text += `🍹 *Barra Terraza:*\n${formatList(nocheShift.barraTerraza)}\n`;
+  text += `🍽️ *Salón:*\n${formatList(nocheShift.salon)}\n`;
+  text += `🍸 *Barra Salón:*\n${formatList(nocheShift.barraSalon)}\n`;
+  text += `🚶‍♂️ *Calle:*\n${formatList(nocheShift.calle)}\n\n`;
 
-  text += `_Generado con GastroTime_`;
+  text += `_GastroTime Control Horario_`;
   return text;
 }
 
 // =============================================================================
-// EXPORTACIÓN A PDF Y ENVÍO A WHATSAPP
+// EXPORTACIÓN A PDF Y ENVÍO DIRECTO A WHATSAPP
 // =============================================================================
 
 async function handleExportZonesPdfAndShare() {
-  // Asegurar que la vista previa esté actualizada en el DOM
   renderZonesPreviewSheet();
 
   const element = document.getElementById('zones-printable-sheet');
@@ -611,13 +857,11 @@ async function handleExportZonesPdfAndShare() {
 
   const statusText = document.getElementById('zones-share-status');
   if (statusText) {
-    statusText.textContent = 'Generando PDF...';
+    statusText.textContent = 'Generando PDF minimalista...';
     statusText.classList.remove('hidden');
   }
 
-  // Comprobar si html2pdf está disponible
   if (typeof html2pdf === 'undefined') {
-    // Si no está disponible la librería CDN, descargar vía diálogo nativo e invocar WhatsApp
     window.print();
     const waText = encodeURIComponent(generateWhatsappText());
     window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
@@ -635,14 +879,11 @@ async function handleExportZonesPdfAndShare() {
 
   try {
     const worker = html2pdf().set(opt).from(element);
-
-    // Obtener blob del PDF
     const pdfBlob = await worker.outputPdf('blob');
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-    if (statusText) statusText.textContent = 'Abriendo WhatsApp...';
+    if (statusText) statusText.textContent = 'Abriendo WhatsApp para enviar PDF al grupo...';
 
-    // Comprobar si el navegador admite compartir archivos directamente a WhatsApp (móviles)
     if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
       await navigator.share({
         files: [pdfFile],
@@ -651,7 +892,6 @@ async function handleExportZonesPdfAndShare() {
       });
       showToast('Cuadrante enviado a WhatsApp.');
     } else {
-      // En PC o navegadores sin Web Share: Descargar el archivo PDF automáticamente
       const downloadUrl = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -661,14 +901,12 @@ async function handleExportZonesPdfAndShare() {
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
 
-      // Y abrir WhatsApp con el texto y aviso
       const waText = encodeURIComponent(generateWhatsappText());
       window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
       showToast('PDF descargado. Se ha abierto WhatsApp para enviarlo al grupo.');
     }
   } catch (err) {
     console.error('Error generando o compartiendo PDF:', err);
-    // Fallback directo a WhatsApp
     const waText = encodeURIComponent(generateWhatsappText());
     window.open(`https://api.whatsapp.com/send?text=${waText}`, '_blank');
     showToast('Se ha abierto WhatsApp con el cuadrante.');
@@ -677,7 +915,7 @@ async function handleExportZonesPdfAndShare() {
   }
 }
 
-// Descarga directa del PDF
+// Descarga directa del archivo PDF
 async function handleDownloadZonesPdf() {
   renderZonesPreviewSheet();
   const element = document.getElementById('zones-printable-sheet');

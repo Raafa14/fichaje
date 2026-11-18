@@ -824,3 +824,81 @@ async function dbSaveDefaultZones(restaurantId, data) {
     saveLocalRestaurants(all);
   }
 }
+
+// 18. Obtener Lista de Plantillas con Nombre para Cuadrante de Zonas
+async function dbGetNamedTemplates(restaurantId) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    const snap = await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('named_templates')
+      .get();
+    const list = [];
+    snap.forEach((doc) => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+    list.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+    return list;
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest && rest.namedTemplates) {
+    const list = Object.keys(rest.namedTemplates).map((k) => rest.namedTemplates[k]);
+    list.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+    return list;
+  }
+  return [];
+}
+
+// 19. Guardar Plantilla con Nombre
+async function dbSaveNamedTemplate(restaurantId, templateName, templateData) {
+  const normKey = templateName.trim();
+  const docData = {
+    id: normKey,
+    name: normKey,
+    ...templateData,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('named_templates')
+      .doc(normKey)
+      .set(docData, { merge: true });
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest) {
+    if (!rest.namedTemplates) rest.namedTemplates = {};
+    rest.namedTemplates[normKey] = docData;
+    saveLocalRestaurants(all);
+  }
+  return docData;
+}
+
+// 20. Eliminar Plantilla con Nombre
+async function dbDeleteNamedTemplate(restaurantId, templateName) {
+  const normKey = templateName.trim();
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('named_templates')
+      .doc(normKey)
+      .delete();
+  }
+
+  const all = getLocalRestaurants();
+  const rest = all[restaurantId];
+  if (rest && rest.namedTemplates) {
+    delete rest.namedTemplates[normKey];
+    saveLocalRestaurants(all);
+  }
+}

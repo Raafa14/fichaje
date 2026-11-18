@@ -19,7 +19,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
 
-  <link rel="stylesheet" href="styles.css?v=2.3">
+  <link rel="stylesheet" href="styles.css?v=2.4">
   <!-- Firebase SDK v10 (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -575,14 +575,21 @@
         </div>
       </div>
 
-      <!-- Barra de acciones rápidas -->
+      <!-- Barra de plantillas con nombre y exportación -->
       <div class="zones-actions-bar">
-        <div class="zones-template-actions">
-          <button type="button" class="btn btn-outline btn-sm" onclick="handleLoadDefaultZones()" title="Cargar tu plantilla predeterminada de turnos">
-            ⚡ Cargar Predeterminado
+        <div class="zones-template-group">
+          <label for="zones-named-template-select" class="zones-label-inline">📋 Plantilla:</label>
+          <select id="zones-named-template-select" class="zones-template-select">
+            <option value="">-- Elige una plantilla guardada --</option>
+          </select>
+          <button type="button" class="btn btn-primary btn-sm" onclick="handleLoadSelectedNamedTemplate()" title="Cargar la plantilla seleccionada">
+            ⚡ Cargar
           </button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="handleSaveAsDefaultZones()" title="Guardar esta distribución como plantilla predeterminada">
-            💾 Guardar como Predeterminado
+          <button type="button" class="btn btn-outline btn-sm" onclick="handleSaveNamedTemplate()" title="Guardar este cuadrante con un nombre de plantilla">
+            💾 Guardar Plantilla...
+          </button>
+          <button type="button" class="btn btn-outline btn-sm btn-delete-tpl" onclick="handleDeleteSelectedNamedTemplate()" title="Eliminar plantilla seleccionada">
+            🗑️
           </button>
         </div>
         <div class="zones-export-actions">
@@ -599,22 +606,19 @@
 
       <p id="zones-share-status" class="zones-status-text hidden"></p>
 
-      <!-- Pestañas internas de turno y vista previa -->
+      <!-- Pestañas principales: 1 Solo Apartado de Asignación vs Vista Previa PDF -->
       <div class="zones-subtabs-nav">
-        <button type="button" id="tab-zones-mediodia" class="zones-subtab-btn active" onclick="switchZonesShift('mediodia')">
-          ☀️ Turno Medio Día (Comida)
+        <button type="button" id="tab-zones-editor" class="zones-subtab-btn active" onclick="switchZonesMainTab('editor')">
+          ✏️ Asignar Camareros (1 solo apartado)
         </button>
-        <button type="button" id="tab-zones-noche" class="zones-subtab-btn" onclick="switchZonesShift('noche')">
-          🌙 Turno Noche (Cena)
-        </button>
-        <button type="button" id="tab-zones-preview" class="zones-subtab-btn btn-preview-tab" onclick="switchZonesShift('preview')">
-          📄 Vista Previa Cuadrante Minimalista
+        <button type="button" id="tab-zones-preview" class="zones-subtab-btn btn-preview-tab" onclick="switchZonesMainTab('preview')">
+          📄 Hoja Cuadrante para WhatsApp (Vista Previa)
         </button>
       </div>
 
-      <!-- Contenedor del Editor interactivo de turnos -->
-      <div id="zones-editor-container" class="zones-editor-container">
-        <!-- Renderizado dinámicamente por js/zones.js -->
+      <!-- Contenedor del Editor Unificado (1 solo apartado) -->
+      <div id="zones-editor-pane" class="zones-editor-pane">
+        <!-- Renderizado dinámicamente por renderUnifiedZonesEditor() -->
       </div>
 
       <!-- Contenedor de la Vista Previa / Hoja Minimalista para el PDF -->
@@ -637,14 +641,14 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Módulos de la Aplicación -->
-  <script src="js/utils.js?v=2.3"></script>
-  <script src="js/state.js?v=2.3"></script>
-  <script src="js/db.js?v=2.3"></script>
-  <script src="js/auth.js?v=2.3"></script>
-  <script src="js/terminal.js?v=2.3"></script>
-  <script src="js/admin.js?v=2.3"></script>
-  <script src="js/zones.js?v=2.3"></script>
-  <script src="js/print.js?v=2.3"></script>
-  <script src="js/main.js?v=2.3"></script>
+  <script src="js/utils.js?v=2.4"></script>
+  <script src="js/state.js?v=2.4"></script>
+  <script src="js/db.js?v=2.4"></script>
+  <script src="js/auth.js?v=2.4"></script>
+  <script src="js/terminal.js?v=2.4"></script>
+  <script src="js/admin.js?v=2.4"></script>
+  <script src="js/zones.js?v=2.4"></script>
+  <script src="js/print.js?v=2.4"></script>
+  <script src="js/main.js?v=2.4"></script>
 </body>
 </html>
