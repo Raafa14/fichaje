@@ -679,3 +679,53 @@ async function dbClearWorkerWeekHours(restaurantId, weekId, workerId) {
   }
   return null;
 }
+
+// 13. Borrar todas las horas del cuadrante de una semana completa
+async function dbClearAllWeekHours(restaurantId, weekId) {
+  const shiftsByDay = {};
+  DAYS_OF_WEEK.forEach((d) => (shiftsByDay[d] = []));
+
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    const weekRef = db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('weekly_records')
+      .doc(weekId);
+
+    const snap = await weekRef.get();
+    if (snap.exists) {
+      const data = snap.data();
+      if (data.workers) {
+        Object.keys(data.workers).forEach((wId) => {
+          data.workers[wId].shifts = shiftsByDay;
+          data.workers[wId].totalMinutes = 0;
+          data.workers[wId].formattedTotal = '0h 00m';
+        });
+      }
+      data.grandTotalMinutes = 0;
+      data.grandTotalFormatted = '0h 00m';
+      data.updatedAt = new Date().toISOString();
+
+      await weekRef.set(data, { merge: true });
+      return data;
+    }
+  }
+
+  const all = getLocalRestaurants();
+  if (all[restaurantId] && all[restaurantId].weeklyRecords && all[restaurantId].weeklyRecords[weekId]) {
+    const wRec = all[restaurantId].weeklyRecords[weekId];
+    if (wRec.workers) {
+      Object.keys(wRec.workers).forEach((wId) => {
+        wRec.workers[wId].shifts = shiftsByDay;
+        wRec.workers[wId].totalMinutes = 0;
+        wRec.workers[wId].formattedTotal = '0h 00m';
+      });
+    }
+    wRec.grandTotalMinutes = 0;
+    wRec.grandTotalFormatted = '0h 00m';
+    saveLocalRestaurants(all);
+    return wRec;
+  }
+  return null;
+}

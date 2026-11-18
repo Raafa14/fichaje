@@ -160,109 +160,155 @@
         </div>
       </div>
 
-      <!-- Añadir Nuevo Trabajador (Solo Nombre y Puesto: Terraza / Encargado) -->
-      <section class="card no-print">
-        <div class="card-header">
-          <h3>Añadir Nuevo Trabajador</h3>
-          <p>Introduce el nombre y puesto del empleado para darlo de alta en el terminal de fichaje.</p>
-        </div>
-        <form class="add-worker-form" onsubmit="handleAddWorker(event)">
-          <div class="form-group">
-            <label for="worker-name">Nombre completo</label>
-            <input type="text" id="worker-name" placeholder="Ej. Sofía Morales" required>
-          </div>
-          <div class="form-group">
-            <label for="worker-role">Puesto</label>
-            <select id="worker-role" required>
-              <option value="Terraza">Terraza</option>
-              <option value="Encargado">Encargado</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="worker-pin">PIN de Fichaje (4 números)</label>
-            <input type="password" id="worker-pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="•••• (Ej: 1234)" required>
-          </div>
-          <button type="submit" class="btn btn-accent">+ Añadir</button>
-        </form>
-      </section>
+      <!-- SUBPESTAÑAS DE CONTROL SEMANAL -->
+      <div class="admin-subtabs-bar no-print">
+        <button type="button" id="subtab-cuadrante-btn" class="admin-subtab-btn active" onclick="switchAdminSubTab('cuadrante')">
+          <svg class="flat-svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          Cuadrante Semanal
+        </button>
+        <button type="button" id="subtab-personal-btn" class="admin-subtab-btn" onclick="switchAdminSubTab('personal')">
+          <svg class="flat-svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Gestión de Personal
+          <span id="badge-total-workers" class="admin-tab-count">0</span>
+        </button>
+      </div>
 
-      <!-- Selector de Semanas e Historial Guardado en Firebase -->
-      <section class="card no-print week-nav-card">
-        <div class="week-nav-row">
-          <div class="week-nav-info">
-            <span id="week-status-badge" class="badge-status-pill active">Semana actual en curso</span>
-            <h2 id="selected-week-title" class="week-title-heading">Semana del ...</h2>
-            <p id="week-subtitle" class="week-subtitle-text">Registro horario semanal oficial</p>
+      <!-- PANEL 1: CUADRANTE SEMANAL -->
+      <div id="subtab-cuadrante-pane">
+        <!-- Selector de Semanas e Historial Guardado en Firebase -->
+        <section class="card no-print week-nav-card">
+          <div class="week-nav-row">
+            <div class="week-nav-info">
+              <span id="week-status-badge" class="badge-status-pill active">Semana actual en curso</span>
+              <h2 id="selected-week-title" class="week-title-heading">Semana del ...</h2>
+              <p id="week-subtitle" class="week-subtitle-text">Registro horario semanal oficial</p>
+            </div>
+            <div class="week-nav-actions">
+              <button type="button" class="btn btn-outline" onclick="navigateWeek(-1)" title="Ver semana anterior">
+                ◀ Semana Anterior
+              </button>
+              <button type="button" id="btn-current-week-quick" class="btn btn-secondary active-week-btn" onclick="goToCurrentWeek()">
+                Semana Actual
+              </button>
+              <button type="button" class="btn btn-outline" onclick="navigateWeek(1)" title="Ver semana siguiente">
+                Semana Siguiente ▶
+              </button>
+              <button type="button" class="btn btn-outline btn-clear-all-week" onclick="handleClearAllWeekHours()" title="Reiniciar todas las horas de esta semana">
+                <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Borrar Todo el Cuadrante
+              </button>
+              <button type="button" id="btn-delete-week" class="btn btn-danger-sm hidden" onclick="handleDeleteSelectedWeek()" title="Eliminar permanentemente el registro de esta semana de la base de datos">
+                <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Borrar Semana
+              </button>
+            </div>
           </div>
-          <div class="week-nav-actions">
-            <button type="button" class="btn btn-outline" onclick="navigateWeek(-1)" title="Ver semana anterior">
-              ◀ Semana Anterior
-            </button>
-            <button type="button" id="btn-current-week-quick" class="btn btn-secondary active-week-btn" onclick="goToCurrentWeek()">
-              Semana Actual
-            </button>
-            <button type="button" class="btn btn-outline" onclick="navigateWeek(1)" title="Ver semana siguiente">
-              Semana Siguiente ▶
-            </button>
-            <button type="button" id="btn-delete-week" class="btn btn-danger-sm hidden" onclick="handleDeleteSelectedWeek()" title="Eliminar permanentemente el registro de esta semana de la base de datos">
-              <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Borrar Semana
-            </button>
+          <div class="week-nav-subrow">
+            <div class="history-select-wrap">
+              <label for="history-weeks-select"><svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>Historial de semanas anteriores:</label>
+              <select id="history-weeks-select" onchange="handleSelectHistoricalWeek(this.value)">
+                <option value="">Cargando semanas guardadas...</option>
+              </select>
+            </div>
+            <div class="week-hours-summary-badge">
+              <span>Total horas del equipo esta semana:</span>
+              <strong id="week-hours-summary-num">0h 00m</strong>
+            </div>
           </div>
-        </div>
-        <div class="week-nav-subrow">
-          <div class="history-select-wrap">
-            <label for="history-weeks-select"><svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>Historial de semanas anteriores:</label>
-            <select id="history-weeks-select" onchange="handleSelectHistoricalWeek(this.value)">
-              <option value="">Cargando semanas guardadas...</option>
-            </select>
+        </section>
+
+        <!-- Cuadrante Semanal Lunes a Domingo (Sin datos económicos) -->
+        <section class="card printable-area">
+          <div class="print-only-header">
+            <h1 id="print-restaurant-title">Restaurante</h1>
+            <p>Hoja de Control Horario Semanal (Lunes a Domingo) — Cierre de Semana</p>
+            <p id="print-week-range" class="print-dates"></p>
           </div>
-          <div class="week-hours-summary-badge">
-            <span>Total horas del equipo esta semana:</span>
-            <strong id="week-hours-summary-num">0h 00m</strong>
+
+          <div class="card-header no-print">
+            <h3>Cuadrante Semanal de Entradas, Salidas y Total de Horas</h3>
+            <p id="screen-week-range">Resumen semanal listo para imprimir el domingo.</p>
           </div>
-        </div>
-      </section>
 
-      <!-- Cuadrante Semanal Lunes a Domingo (Sin datos económicos) -->
-      <section class="card printable-area">
-        <div class="print-only-header">
-          <h1 id="print-restaurant-title">Restaurante</h1>
-          <p>Hoja de Control Horario Semanal (Lunes a Domingo) — Cierre de Semana</p>
-          <p id="print-week-range" class="print-dates"></p>
-        </div>
+          <div class="mobile-table-hint no-print">
+            👉 Desliza la tabla horizontalmente para ver todos los días y horas
+          </div>
 
-        <div class="card-header no-print">
-          <h3>Cuadrante Semanal de Entradas, Salidas y Total de Horas</h3>
-          <p id="screen-week-range">Resumen semanal listo para imprimir el domingo.</p>
-        </div>
+          <div class="table-responsive">
+            <table class="schedule-table">
+              <thead>
+                <tr>
+                  <th>Trabajador</th>
+                  <th>Lunes</th>
+                  <th>Martes</th>
+                  <th>Miércoles</th>
+                  <th>Jueves</th>
+                  <th>Viernes</th>
+                  <th>Sábado</th>
+                  <th>Domingo</th>
+                  <th>Total Horas</th>
+                  <th class="print-only-col">Firma Encargado</th>
+                  <th class="no-print">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="weekly-table-body">
+                <!-- Filas generadas por JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
-        <div class="mobile-table-hint no-print">
-          👉 Desliza la tabla horizontalmente para ver todos los días y horas
-        </div>
+      <!-- PANEL 2: GESTIÓN DE PERSONAL / TRABAJADORES -->
+      <div id="subtab-personal-pane" class="hidden no-print">
+        <!-- Añadir Nuevo Trabajador -->
+        <section class="card">
+          <div class="card-header">
+            <h3>Añadir Nuevo Trabajador</h3>
+            <p>Introduce el nombre, puesto y PIN del empleado para darlo de alta en el terminal de fichaje.</p>
+          </div>
+          <form class="add-worker-form" onsubmit="handleAddWorker(event)">
+            <div class="form-group">
+              <label for="worker-name">Nombre completo</label>
+              <input type="text" id="worker-name" placeholder="Ej. Sofía Morales" required>
+            </div>
+            <div class="form-group">
+              <label for="worker-role">Puesto</label>
+              <select id="worker-role" required>
+                <option value="Terraza">Terraza</option>
+                <option value="Encargado">Encargado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="worker-pin">PIN de Fichaje (4 números)</label>
+              <input type="password" id="worker-pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="•••• (Ej: 1234)" required>
+            </div>
+            <button type="submit" class="btn btn-accent">+ Añadir</button>
+          </form>
+        </section>
 
-        <div class="table-responsive">
-          <table class="schedule-table">
-            <thead>
-              <tr>
-                <th>Trabajador</th>
-                <th>Lunes</th>
-                <th>Martes</th>
-                <th>Miércoles</th>
-                <th>Jueves</th>
-                <th>Viernes</th>
-                <th>Sábado</th>
-                <th>Domingo</th>
-                <th>Total Horas</th>
-                <th class="print-only-col">Firma Encargado</th>
-                <th class="no-print">Acción</th>
-              </tr>
-            </thead>
-            <tbody id="weekly-table-body">
-              <!-- Filas generadas por JS -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <!-- Plantilla de Empleados del Restaurante -->
+        <section class="card">
+          <div class="card-header">
+            <h3>Plantilla de Empleados del Restaurante</h3>
+            <p>Listado de trabajadores registrados. Puedes ver su PIN y eliminarlos definitivamente de la empresa si causan baja.</p>
+          </div>
+          <div class="table-responsive">
+            <table class="schedule-table workers-manage-table">
+              <thead>
+                <tr>
+                  <th style="text-align: left;">Trabajador</th>
+                  <th>Puesto</th>
+                  <th>PIN Fichaje</th>
+                  <th>Estado Actual</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="admin-workers-table-body">
+                <!-- Generado por JS -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 

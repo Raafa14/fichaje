@@ -190,6 +190,7 @@ async function loadAndRenderSelectedWeek() {
 
   selectedWeekRecord = await dbGetOrCreateWeekRecord(activeRestaurant.id, selectedWeekMonday, currentWorkers);
   renderWeeklyTable();
+  renderAdminWorkersList();
 }
 
 // Elimina permanentemente una semana histórica anterior de la base de datos
@@ -220,7 +221,7 @@ async function handleDeleteSelectedWeek() {
   }
 }
 
-// Borra las horas de un empleado específico en la semana seleccionada
+// Borra las horas de un empleado específico en la semana seleccionada (SIN eliminar al trabajador)
 async function handleClearWorkerWeekHours(workerId) {
   if (!activeRestaurant || !selectedWeekMonday) return;
   const weekId = getWeekId(selectedWeekMonday);
@@ -232,7 +233,7 @@ async function handleClearWorkerWeekHours(workerId) {
   const workerName = wData ? wData.name : 'este empleado';
 
   const confirmed = confirm(
-    `¿Deseas borrar y reiniciar a 0h todas las horas de ${workerName} para la "${weekRange}" en la base de datos?`
+    `¿Deseas borrar y reiniciar a 0h las horas de ${workerName} para la "${weekRange}"?\n\n(El trabajador seguirá dado de alta en la plantilla, solo se borran sus horas de esta semana)`
   );
   if (!confirmed) return;
 
@@ -247,12 +248,77 @@ async function handleClearWorkerWeekHours(workerId) {
       selectedWeekRecord.workers[workerId].totalMinutes = 0;
       selectedWeekRecord.workers[workerId].formattedTotal = '0h 00m';
     }
+
+    const currentMonday = getMondayOfDate(new Date());
+    if (isSameDate(selectedWeekMonday, currentMonday)) {
+      if (currentWeekRecord && currentWeekRecord.workers && currentWeekRecord.workers[workerId]) {
+        const shiftsByDay = {};
+        DAYS_OF_WEEK.forEach((d) => (shiftsByDay[d] = []));
+        currentWeekRecord.workers[workerId].shifts = shiftsByDay;
+        currentWeekRecord.workers[workerId].totalMinutes = 0;
+        currentWeekRecord.workers[workerId].formattedTotal = '0h 00m';
+      }
+      renderTerminalWorkers();
+    }
+
     renderWeeklyTable();
     await refreshHistoricalWeeksDropdown();
-    showToast(`Horas de ${workerName} borradas de la base de datos para esta semana.`);
+    showToast(`Horas de ${workerName} borradas para esta semana.`);
   } catch (err) {
     console.error('Error al borrar horas del trabajador:', err);
     showToast('Error al borrar horas: ' + err.message);
+  }
+}
+
+// Borra todas las horas de toda la semana de todos los empleados (SIN eliminar a los trabajadores)
+async function handleClearAllWeekHours() {
+  if (!activeRestaurant || !selectedWeekMonday) return;
+  const weekId = getWeekId(selectedWeekMonday);
+  const weekRange = getWeekRangeText(selectedWeekMonday);
+
+  const confirmed = confirm(
+    `¿Deseas borrar y reiniciar a 0h todas las horas de TODO el equipo para la "${weekRange}"?\n\n(Los trabajadores seguirán dados de alta en la plantilla, solo se vaciarán sus registros de esta semana)`
+  );
+  if (!confirmed) return;
+
+  try {
+    const updated = await dbClearAllWeekHours(activeRestaurant.id, weekId);
+    if (updated) {
+      selectedWeekRecord = updated;
+    } else if (selectedWeekRecord && selectedWeekRecord.workers) {
+      const shiftsByDay = {};
+      DAYS_OF_WEEK.forEach((d) => (shiftsByDay[d] = []));
+      Object.keys(selectedWeekRecord.workers).forEach((wId) => {
+        selectedWeekRecord.workers[wId].shifts = shiftsByDay;
+        selectedWeekRecord.workers[wId].totalMinutes = 0;
+        selectedWeekRecord.workers[wId].formattedTotal = '0h 00m';
+      });
+      selectedWeekRecord.grandTotalMinutes = 0;
+      selectedWeekRecord.grandTotalFormatted = '0h 00m';
+    }
+
+    const currentMonday = getMondayOfDate(new Date());
+    if (isSameDate(selectedWeekMonday, currentMonday)) {
+      if (currentWeekRecord && currentWeekRecord.workers) {
+        const shiftsByDay = {};
+        DAYS_OF_WEEK.forEach((d) => (shiftsByDay[d] = []));
+        Object.keys(currentWeekRecord.workers).forEach((wId) => {
+          currentWeekRecord.workers[wId].shifts = shiftsByDay;
+          currentWeekRecord.workers[wId].totalMinutes = 0;
+          currentWeekRecord.workers[wId].formattedTotal = '0h 00m';
+        });
+        currentWeekRecord.grandTotalMinutes = 0;
+        currentWeekRecord.grandTotalFormatted = '0h 00m';
+      }
+      renderTerminalWorkers();
+    }
+
+    renderWeeklyTable();
+    await refreshHistoricalWeeksDropdown();
+    showToast(`Cuadrante de la semana "${weekRange}" reiniciado a 0h.`);
+  } catch (err) {
+    console.error('Error al reiniciar cuadrante semanal:', err);
+    showToast('Error al reiniciar cuadrante: ' + err.message);
   }
 }
 
@@ -362,20 +428,11 @@ function renderWeeklyTable() {
       }
     });
 
-    let actionBtnHtml = '';
-    if (isPastWeek) {
-      actionBtnHtml = `
-        <button type="button" class="btn-danger-sm" onclick="handleClearWorkerWeekHours('${id}')" title="Borrar horas de este empleado en esta semana de la base de datos">
-          ${FLAT_TRASH_SVG} Borrar Horas
-        </button>
-      `;
-    } else {
-      actionBtnHtml = `
-        <button type="button" class="btn-danger-sm" onclick="handleDeleteWorker('${id}')" title="Eliminar trabajador permanentemente">
-          Eliminar
-        </button>
-      `;
-    }
+    const actionBtnHtml = `
+      <button type="button" class="btn-danger-sm btn-clear-hours" onclick="handleClearWorkerWeekHours('${id}')" title="Borrar horas y cuadrante de este empleado en esta semana">
+        ${FLAT_TRASH_SVG} Borrar Horas
+      </button>
+    `;
 
     const workerPinText = wData.pin ? `<br><span class="worker-pin-tag" title="PIN de fichaje">PIN: ${wData.pin}</span>` : '<br><span class="worker-pin-tag no-pin">Sin PIN</span>';
 
@@ -451,6 +508,7 @@ async function handleAddWorker(e) {
     nameInput.value = '';
     if (pinInput) pinInput.value = '';
     renderTerminalWorkers();
+    renderAdminWorkersList();
     await loadAndRenderSelectedWeek();
     showToast(`Trabajador "${name}" (${role}) guardado con su PIN.`);
   } catch (err) {
@@ -470,12 +528,17 @@ async function handleDeleteWorker(workerId) {
   const worker = currentWorkers.find((w) => String(w.id) === String(workerId));
   const wName = worker ? worker.name : 'este trabajador';
 
-  if (!confirm(`¿Eliminar definitivamente a ${wName} del cuadrante y del sistema?`)) return;
+  if (
+    !confirm(
+      `¿Eliminar definitivamente a ${wName} de la plantilla del restaurante?\n\nEsta acción borrará al trabajador de forma permanente del sistema, del terminal de fichaje y de la lista de personal.`
+    )
+  )
+    return;
 
   try {
     await dbDeleteWorker(activeRestaurant.id, workerId);
 
-    // Limpiar inmediatamente de memoria local para que desaparezca al instante del cuadrante
+    // Limpiar inmediatamente de memoria local para que desaparezca al instante del cuadrante y terminal
     currentWorkers = currentWorkers.filter((w) => String(w.id) !== String(workerId));
     if (currentWeekRecord && currentWeekRecord.workers) {
       delete currentWeekRecord.workers[workerId];
@@ -488,11 +551,98 @@ async function handleDeleteWorker(workerId) {
 
     renderTerminalWorkers();
     renderWeeklyTable();
-    showToast(`Trabajador "${wName}" eliminado permanentemente.`);
+    renderAdminWorkersList();
+    showToast(`Trabajador "${wName}" eliminado permanentemente de la plantilla.`);
   } catch (err) {
     console.error('Error eliminando trabajador:', err);
     showToast('Error al eliminar trabajador.');
   }
+}
+
+// --- SUBPESTAÑAS DE CONTROL SEMANAL Y GESTIÓN DE PERSONAL ---
+
+let currentAdminSubTab = 'cuadrante';
+
+function switchAdminSubTab(tabName) {
+  currentAdminSubTab = tabName;
+  const cuadranteBtn = document.getElementById('subtab-cuadrante-btn');
+  const personalBtn = document.getElementById('subtab-personal-btn');
+  const cuadrantePane = document.getElementById('subtab-cuadrante-pane');
+  const personalPane = document.getElementById('subtab-personal-pane');
+
+  if (tabName === 'personal') {
+    if (cuadranteBtn) cuadranteBtn.classList.remove('active');
+    if (personalBtn) personalBtn.classList.add('active');
+    if (cuadrantePane) cuadrantePane.classList.add('hidden');
+    if (personalPane) personalPane.classList.remove('hidden');
+    renderAdminWorkersList();
+  } else {
+    if (cuadranteBtn) cuadranteBtn.classList.add('active');
+    if (personalBtn) personalBtn.classList.remove('active');
+    if (cuadrantePane) cuadrantePane.classList.remove('hidden');
+    if (personalPane) personalPane.classList.add('hidden');
+    renderWeeklyTable();
+  }
+}
+
+function renderAdminWorkersList() {
+  const tbody = document.getElementById('admin-workers-table-body');
+  const countBadge = document.getElementById('badge-total-workers');
+  if (countBadge) {
+    countBadge.textContent = currentWorkers ? currentWorkers.length : 0;
+  }
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  if (!currentWorkers || currentWorkers.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="empty-table-cell" style="padding: 24px; text-align: center; color: #64748b;">
+          No hay trabajadores registrados en la plantilla. Añade a tu primer empleado con el formulario superior.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  currentWorkers.forEach((worker) => {
+    const working = typeof isWorkerWorking === 'function' ? isWorkerWorking(worker.id) : false;
+    const entryTime = typeof getActiveEntryTime === 'function' ? getActiveEntryTime(worker.id) : null;
+    const tr = document.createElement('tr');
+
+    const pinDisplay = worker.pin
+      ? `<span class="worker-pin-tag">PIN: ${worker.pin}</span>`
+      : `<span class="worker-pin-tag no-pin">Sin PIN</span>`;
+
+    const statusDisplay = working
+      ? `<span class="status-tag" style="background:#d1fae5;color:#065f46;font-weight:700;">● En turno (${entryTime || ''})</span>`
+      : `<span class="status-tag">Fuera de turno</span>`;
+
+    const roleClass = worker.role === 'Encargado' ? 'role-encargado' : 'role-terraza';
+
+    tr.innerHTML = `
+      <td style="text-align: left;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar" style="width:34px;height:34px;font-size:12px;">${getInitials(worker.name)}</div>
+          <div>
+            <strong style="color:var(--primary);font-size:14px;">${worker.name}</strong>
+          </div>
+        </div>
+      </td>
+      <td>
+        <span class="role-badge ${roleClass}">${worker.role}</span>
+      </td>
+      <td>${pinDisplay}</td>
+      <td>${statusDisplay}</td>
+      <td style="white-space: nowrap;">
+        <button type="button" class="btn-danger-sm" onclick="handleDeleteWorker('${worker.id}')" title="Eliminar trabajador permanentemente de la empresa">
+          <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Eliminar Trabajador
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 // --- AJUSTES DEL RESTAURANTE / LOCAL ---

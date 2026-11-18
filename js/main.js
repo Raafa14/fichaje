@@ -29,6 +29,7 @@ async function showAdminView() {
 
   await loadAndRenderSelectedWeek();
   await refreshHistoricalWeeksDropdown();
+  renderAdminWorkersList();
 }
 
 /**
@@ -56,6 +57,7 @@ function setupFirestoreListeners(restaurantId) {
         renderTerminalWorkers();
         if (!document.getElementById('admin-section').classList.contains('hidden')) {
           renderWeeklyTable();
+          renderAdminWorkersList();
         }
       },
       (err) => console.warn('Error escuchando trabajadores:', err)
