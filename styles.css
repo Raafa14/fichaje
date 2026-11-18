@@ -1979,6 +1979,13 @@ input:focus, select:focus {
    CUADRANTE DIARIO DE ZONAS, TURNOS Y EXPORTACIÓN A WHATSAPP
    ============================================================================= */
 
+/* Botones de acceso a Cuadrante Zonas (temporalmente inhabilitados sin borrar nada) */
+.nav-zones-btn,
+#nav-zones,
+.terminal-quick-tools {
+  display: none !important;
+}
+
 .nav-zones-btn {
   background: rgba(245, 158, 11, 0.15) !important;
   color: #f59e0b !important;

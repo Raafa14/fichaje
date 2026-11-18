@@ -19,7 +19,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
 
-  <link rel="stylesheet" href="styles.css?v=2.6">
+  <link rel="stylesheet" href="styles.css?v=2.7">
   <!-- Firebase SDK v10 (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -106,7 +106,8 @@
         <button type="button" id="nav-terminal" class="nav-btn active" onclick="showTerminalView()" title="Terminal Fichaje">
           <svg class="flat-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><polyline points="12 6 12 12 15 15"></polyline></svg><span class="nav-text">Fichaje</span>
         </button>
-        <button type="button" id="nav-zones" class="nav-btn nav-zones-btn" onclick="openZonesModal()" title="Cuadrante Diario de Zonas y Puestos (WhatsApp)">
+        <!-- Botón Cuadrante Zonas temporalmente inhabilitado a petición del usuario (código preservado) -->
+        <button type="button" id="nav-zones" class="nav-btn nav-zones-btn hidden" onclick="openZonesModal()" title="Cuadrante Diario de Zonas y Puestos (WhatsApp)" style="display: none !important;">
           <svg class="flat-svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span class="nav-text">Cuadrante Zonas</span>
         </button>
         <button type="button" id="nav-admin" class="nav-btn nav-admin-btn" onclick="requestAdminAccess()" title="Control Semanal">
@@ -136,7 +137,8 @@
             <span class="counter-label">Fuera de turno</span>
           </div>
         </div>
-        <div class="terminal-quick-tools" style="margin-top: 12px; display:flex; justify-content:flex-end;">
+        <!-- Acceso directo Cuadrante Zonas temporalmente inhabilitado a petición del usuario (código preservado) -->
+        <div class="terminal-quick-tools hidden" style="margin-top: 12px; display: none !important; justify-content:flex-end;">
           <button type="button" class="btn btn-outline btn-sm" onclick="openZonesModal()" style="display:inline-flex; align-items:center; gap:7px; font-weight:700; background:#ffffff;">
             <svg class="flat-svg-icon icon-sm" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             📋 Planificar Zonas y Enviar a WhatsApp
@@ -641,14 +643,14 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Módulos de la Aplicación -->
-  <script src="js/utils.js?v=2.6"></script>
-  <script src="js/state.js?v=2.6"></script>
-  <script src="js/db.js?v=2.6"></script>
-  <script src="js/auth.js?v=2.6"></script>
-  <script src="js/terminal.js?v=2.6"></script>
-  <script src="js/admin.js?v=2.6"></script>
-  <script src="js/zones.js?v=2.6"></script>
-  <script src="js/print.js?v=2.6"></script>
-  <script src="js/main.js?v=2.6"></script>
+  <script src="js/utils.js?v=2.7"></script>
+  <script src="js/state.js?v=2.7"></script>
+  <script src="js/db.js?v=2.7"></script>
+  <script src="js/auth.js?v=2.7"></script>
+  <script src="js/terminal.js?v=2.7"></script>
+  <script src="js/admin.js?v=2.7"></script>
+  <script src="js/zones.js?v=2.7"></script>
+  <script src="js/print.js?v=2.7"></script>
+  <script src="js/main.js?v=2.7"></script>
 </body>
 </html>
