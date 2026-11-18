@@ -298,10 +298,22 @@ function renderWeeklyTable() {
 
   let grandTotalMinutes = 0;
 
-  const workerIds = new Set([
-    ...currentWorkers.map((w) => String(w.id)),
-    ...Object.keys(weekRec.workers)
-  ]);
+  const currentWorkerIdSet = new Set(currentWorkers.map((w) => String(w.id)));
+
+  // En la semana en curso (o futura), mostrar estrictamente los trabajadores activos
+  // En semanas pasadas, mostrar trabajadores con horas registradas o activos
+  let workerIds;
+  if (!isPastWeek) {
+    workerIds = currentWorkerIdSet;
+  } else {
+    workerIds = new Set([
+      ...currentWorkers.map((w) => String(w.id)),
+      ...Object.keys(weekRec.workers || {}).filter((id) => {
+        const rec = weekRec.workers[id];
+        return rec && (calculateTotalMinutesForWorker(rec) > 0 || currentWorkerIdSet.has(String(id)));
+      })
+    ]);
+  }
 
   if (workerIds.size === 0) {
     tbody.innerHTML = `
@@ -359,16 +371,19 @@ function renderWeeklyTable() {
       `;
     } else {
       actionBtnHtml = `
-        <button type="button" class="btn-danger-sm" onclick="handleDeleteWorker('${id}')" title="Dar de baja trabajador">
+        <button type="button" class="btn-danger-sm" onclick="handleDeleteWorker('${id}')" title="Eliminar trabajador permanentemente">
           Eliminar
         </button>
       `;
     }
 
+    const workerPinText = wData.pin ? `<br><span class="worker-pin-tag" title="PIN de fichaje">PIN: ${wData.pin}</span>` : '<br><span class="worker-pin-tag no-pin">Sin PIN</span>';
+
     tr.innerHTML = `
       <td>
         <strong>${workerRecord.name || wData.name}</strong><br>
         <small style="color:#64748b">${workerRecord.role || wData.role}</small>
+        ${workerPinText}
       </td>
       ${daysHtml}
       <td class="total-hours-cell">${formatDuration(totalMins)}</td>
@@ -393,10 +408,19 @@ async function handleAddWorker(e) {
   e.preventDefault();
   const nameInput = document.getElementById('worker-name');
   const roleSelect = document.getElementById('worker-role');
+  const pinInput = document.getElementById('worker-pin');
 
   const name = nameInput.value.trim();
   const role = roleSelect.value;
+  const pin = pinInput ? pinInput.value.trim() : '';
+
   if (!name || !activeRestaurant) return;
+
+  if (pin && !/^\d{4}$/.test(pin)) {
+    showToast('El PIN debe tener exactamente 4 números (ej: 1234).');
+    if (pinInput) pinInput.focus();
+    return;
+  }
 
   const alreadyExists = currentWorkers.some(
     (w) => w.name.trim().toLowerCase() === name.toLowerCase() && w.role.toLowerCase() === role.toLowerCase()
@@ -409,7 +433,8 @@ async function handleAddWorker(e) {
   const newWorker = {
     id: Date.now(),
     name,
-    role
+    role,
+    pin: pin || ''
   };
 
   try {
@@ -424,9 +449,10 @@ async function handleAddWorker(e) {
     currentWorkers = deduplicateWorkers(currentWorkers);
 
     nameInput.value = '';
+    if (pinInput) pinInput.value = '';
     renderTerminalWorkers();
     await loadAndRenderSelectedWeek();
-    showToast(`Trabajador "${name}" (${role}) guardado correctamente.`);
+    showToast(`Trabajador "${name}" (${role}) guardado con su PIN.`);
   } catch (err) {
     console.error('Error añadiendo trabajador:', err);
     showToast('Error al añadir trabajador: ' + err.message);
@@ -444,14 +470,25 @@ async function handleDeleteWorker(workerId) {
   const worker = currentWorkers.find((w) => String(w.id) === String(workerId));
   const wName = worker ? worker.name : 'este trabajador';
 
-  if (!confirm(`¿Eliminar a ${wName} de la lista de trabajadores?`)) return;
+  if (!confirm(`¿Eliminar definitivamente a ${wName} del cuadrante y del sistema?`)) return;
 
   try {
     await dbDeleteWorker(activeRestaurant.id, workerId);
+
+    // Limpiar inmediatamente de memoria local para que desaparezca al instante del cuadrante
     currentWorkers = currentWorkers.filter((w) => String(w.id) !== String(workerId));
+    if (currentWeekRecord && currentWeekRecord.workers) {
+      delete currentWeekRecord.workers[workerId];
+      delete currentWeekRecord.workers[String(workerId)];
+    }
+    if (selectedWeekRecord && selectedWeekRecord.workers) {
+      delete selectedWeekRecord.workers[workerId];
+      delete selectedWeekRecord.workers[String(workerId)];
+    }
+
     renderTerminalWorkers();
     renderWeeklyTable();
-    showToast('Trabajador eliminado.');
+    showToast(`Trabajador "${wName}" eliminado permanentemente.`);
   } catch (err) {
     console.error('Error eliminando trabajador:', err);
     showToast('Error al eliminar trabajador.');

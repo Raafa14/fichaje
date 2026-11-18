@@ -281,23 +281,83 @@ async function dbAddWorker(restaurantId, workerObj) {
   }
 }
 
-// 5. Eliminar Trabajador
+// 5. Eliminar Trabajador (definitiva y permanentemente)
 async function dbDeleteWorker(restaurantId, workerId) {
   if (isUsingFirebase()) {
     const db = getFirestoreDb();
-    const workerRef = db
-      .collection('restaurants')
-      .doc(restaurantId)
-      .collection('workers')
-      .doc(String(workerId));
+    const restRef = db.collection('restaurants').doc(restaurantId);
 
-    await workerRef.update({ active: false });
+    // 1. Eliminar permanentemente de la subcolección de trabajadores
+    try {
+      await restRef.collection('workers').doc(String(workerId)).delete();
+    } catch (e) {
+      console.warn('Error borrando documento del trabajador en workers:', e);
+    }
+
+    // 2. Eliminar al trabajador de los registros semanales actuales
+    try {
+      const currentMonday = getMondayOfDate(new Date());
+      const currentWeekId = getWeekId(currentMonday);
+      const weekRef = restRef.collection('weekly_records').doc(currentWeekId);
+      const snap = await weekRef.get();
+      if (snap.exists) {
+        await weekRef.update({
+          [`workers.${workerId}`]: firebase.firestore.FieldValue.delete()
+        });
+      }
+
+      // Si hay una semana seleccionada diferente a la actual
+      if (typeof selectedWeekMonday !== 'undefined' && selectedWeekMonday) {
+        const selWeekId = getWeekId(selectedWeekMonday);
+        if (selWeekId !== currentWeekId) {
+          const selRef = restRef.collection('weekly_records').doc(selWeekId);
+          const selSnap = await selRef.get();
+          if (selSnap.exists) {
+            await selRef.update({
+              [`workers.${workerId}`]: firebase.firestore.FieldValue.delete()
+            });
+          }
+        }
+      }
+    } catch (weekErr) {
+      console.warn('Error eliminando trabajador del registro semanal:', weekErr);
+    }
   } else {
     const all = getLocalRestaurants();
     const rest = all[restaurantId];
     if (!rest) return;
-    rest.workers = (rest.workers || []).filter((w) => w.id !== workerId);
+    rest.workers = (rest.workers || []).filter((w) => String(w.id) !== String(workerId));
+
+    if (rest.weeklyRecords) {
+      Object.keys(rest.weeklyRecords).forEach((wId) => {
+        if (rest.weeklyRecords[wId].workers) {
+          delete rest.weeklyRecords[wId].workers[workerId];
+          delete rest.weeklyRecords[wId].workers[String(workerId)];
+        }
+      });
+    }
     saveLocalRestaurants(all);
+  }
+}
+
+// 5B. Actualizar PIN personal del Trabajador
+async function dbUpdateWorkerPin(restaurantId, workerId, newPin) {
+  if (isUsingFirebase()) {
+    const db = getFirestoreDb();
+    await db
+      .collection('restaurants')
+      .doc(restaurantId)
+      .collection('workers')
+      .doc(String(workerId))
+      .update({ pin: String(newPin).trim() });
+  } else {
+    const all = getLocalRestaurants();
+    const rest = all[restaurantId];
+    if (rest && rest.workers) {
+      const w = rest.workers.find((x) => String(x.id) === String(workerId));
+      if (w) w.pin = String(newPin).trim();
+      saveLocalRestaurants(all);
+    }
   }
 }
 

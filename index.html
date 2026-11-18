@@ -178,6 +178,10 @@
               <option value="Encargado">Encargado</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="worker-pin">PIN de Fichaje (4 números)</label>
+            <input type="password" id="worker-pin" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="•••• (Ej: 1234)" required>
+          </div>
           <button type="submit" class="btn btn-accent">+ Añadir</button>
         </form>
       </section>
@@ -275,9 +279,29 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeClockModal()">Cancelar</button>
         <button type="button" id="clock-modal-confirm-btn" class="btn btn-primary" onclick="confirmClockAction()">
-          Sí, Confirmar
+          ✓ Aceptar y Fichar Entrada
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1B: PIN PERSONAL DEL TRABAJADOR PARA FICHAR -->
+  <div id="worker-pin-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <button type="button" class="modal-close-btn" onclick="closeWorkerPinModal()" aria-label="Cerrar" title="Cerrar">
+        <svg class="flat-svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div id="worker-pin-badge" class="modal-badge badge-dark">IDENTIDAD</div>
+      <h3 id="worker-pin-title">Introduce tu PIN</h3>
+      <p id="worker-pin-desc" class="modal-desc">Escribe tu contraseña de 4 dígitos para identificarte y fichar.</p>
+      <form onsubmit="handleWorkerPinSubmit(event)">
+        <input type="password" id="worker-pin-input" class="pin-input" maxlength="4" pattern="\d{4}" inputmode="numeric" placeholder="••••" required oninput="handleWorkerPinAutoInput(this)">
+        <p id="worker-pin-error" class="error-text hidden"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeWorkerPinModal()">Cancelar</button>
+          <button type="submit" id="worker-pin-submit-btn" class="btn btn-primary">Verificar PIN</button>
+        </div>
+      </form>
     </div>
   </div>
 

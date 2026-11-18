@@ -246,8 +246,12 @@ function unlockBodyScroll() {
     (e) => {
       if (document.body.classList.contains('modal-open')) {
         const pinModal = document.getElementById('pin-modal');
-        if (pinModal && !pinModal.classList.contains('hidden')) {
-          // El modal de PIN es 100% estático
+        const workerPinModal = document.getElementById('worker-pin-modal');
+        if (
+          (pinModal && !pinModal.classList.contains('hidden')) ||
+          (workerPinModal && !workerPinModal.classList.contains('hidden'))
+        ) {
+          // Los modales de PIN son 100% estáticos
           e.preventDefault();
           return;
         }

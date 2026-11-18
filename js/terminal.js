@@ -70,7 +70,7 @@ function renderTerminalWorkers() {
     const entryTime = getActiveEntryTime(worker.id);
     const card = document.createElement('div');
     card.className = `worker-card ${working ? 'working' : ''}`;
-    card.onclick = () => openClockConfirmation(worker.id);
+    card.onclick = () => handleWorkerCardClockClick(worker.id);
 
     card.innerHTML = `
       <div class="worker-top">
@@ -99,6 +99,142 @@ function renderTerminalWorkers() {
   if (countOffEl) countOffEl.textContent = currentWorkers.length - workingCount;
 }
 
+// =============================================================================
+// PIN PERSONAL DEL TRABAJADOR PARA FICHAR
+// =============================================================================
+let pendingPinWorkerId = null;
+
+function handleWorkerCardClockClick(workerId) {
+  const worker = currentWorkers.find((w) => String(w.id) === String(workerId));
+  if (!worker) return;
+
+  pendingPinWorkerId = workerId;
+  openWorkerPinModal(worker);
+}
+
+function openWorkerPinModal(worker) {
+  const modal = document.getElementById('worker-pin-modal');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('worker-pin-title');
+  const descEl = document.getElementById('worker-pin-desc');
+  const badgeEl = document.getElementById('worker-pin-badge');
+  const inputEl = document.getElementById('worker-pin-input');
+  const errorEl = document.getElementById('worker-pin-error');
+  const submitBtn = document.getElementById('worker-pin-submit-btn');
+
+  if (errorEl) errorEl.classList.add('hidden');
+  if (inputEl) inputEl.value = '';
+
+  const working = isWorkerWorking(worker.id);
+  const actionText = working ? 'SALIDA' : 'ENTRADA';
+
+  if (badgeEl) {
+    badgeEl.textContent = `FICHAJE DE ${actionText}`;
+    badgeEl.style.background = working ? '#fee2e2' : '#d1fae5';
+    badgeEl.style.color = working ? '#b91c1c' : '#065f46';
+  }
+
+  if (worker.pin && String(worker.pin).trim().length === 4) {
+    if (titleEl) titleEl.textContent = `PIN de ${worker.name}`;
+    if (descEl) descEl.textContent = `Introduce tu contraseña de 4 números para registrar tu ${actionText.toLowerCase()}.`;
+    if (submitBtn) submitBtn.textContent = 'Verificar PIN';
+  } else {
+    if (titleEl) titleEl.textContent = `Crea tu PIN de Fichaje`;
+    if (descEl) descEl.textContent = `${worker.name} (${worker.role}) — Elige tu PIN de 4 números para fichar a partir de ahora.`;
+    if (submitBtn) submitBtn.textContent = 'Guardar PIN y Continuar';
+  }
+
+  modal.classList.remove('hidden');
+  lockBodyScroll();
+  setTimeout(() => {
+    if (inputEl) inputEl.focus();
+  }, 60);
+}
+
+function closeWorkerPinModal() {
+  const modal = document.getElementById('worker-pin-modal');
+  if (modal) modal.classList.add('hidden');
+  unlockBodyScroll();
+  pendingPinWorkerId = null;
+}
+
+function handleWorkerPinAutoInput(inputEl) {
+  const pin = inputEl.value.trim();
+  if (pin.length === 4) {
+    processWorkerPinValidation(pin, inputEl);
+  }
+}
+
+function handleWorkerPinSubmit(e) {
+  if (e) e.preventDefault();
+  const inputEl = document.getElementById('worker-pin-input');
+  if (inputEl) {
+    processWorkerPinValidation(inputEl.value.trim(), inputEl);
+  }
+}
+
+async function processWorkerPinValidation(pin, inputEl) {
+  if (!pendingPinWorkerId || !activeRestaurant) return;
+  const worker = currentWorkers.find((w) => String(w.id) === String(pendingPinWorkerId));
+  if (!worker) return;
+
+  const errorEl = document.getElementById('worker-pin-error');
+
+  // Si el trabajador aún no tenía PIN asignado
+  if (!worker.pin || String(worker.pin).trim().length !== 4) {
+    if (!/^\d{4}$/.test(pin)) {
+      if (errorEl) {
+        errorEl.textContent = 'El PIN debe ser de 4 números.';
+        errorEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    try {
+      worker.pin = pin;
+      await dbUpdateWorkerPin(activeRestaurant.id, worker.id, pin);
+      showToast(`PIN guardado para ${worker.name}.`);
+      const targetId = worker.id;
+      closeWorkerPinModal();
+      openClockConfirmation(targetId);
+      return;
+    } catch (err) {
+      console.error('Error guardando PIN del trabajador:', err);
+      if (errorEl) {
+        errorEl.textContent = 'Error al guardar PIN. Inténtalo de nuevo.';
+        errorEl.classList.remove('hidden');
+      }
+      return;
+    }
+  }
+
+  // Comprobar si coincide con el PIN del trabajador o con el PIN Maestro del código
+  const isWorkerValid = String(worker.pin).trim() === pin;
+  const isMasterValid = typeof MASTER_ADMIN_PIN === 'string' && MASTER_ADMIN_PIN.trim().length === 4 && pin === MASTER_ADMIN_PIN.trim();
+
+  if (isWorkerValid || isMasterValid) {
+    if (errorEl) errorEl.classList.add('hidden');
+    const targetId = worker.id;
+    closeWorkerPinModal();
+    // PIN correcto -> Pedir confirmar fichaje ("tickar para aceptar")
+    openClockConfirmation(targetId);
+  } else {
+    if (errorEl) {
+      errorEl.textContent = 'PIN incorrecto. Inténtalo de nuevo.';
+      errorEl.classList.remove('hidden');
+    }
+    if (inputEl) {
+      inputEl.classList.add('shake');
+      setTimeout(() => {
+        inputEl.value = '';
+        inputEl.classList.remove('shake');
+        inputEl.focus();
+      }, 360);
+    }
+  }
+}
+
 // Modal de confirmación de fichaje
 function openClockConfirmation(workerId) {
   const worker = currentWorkers.find((w) => String(w.id) === String(workerId));
@@ -119,15 +255,15 @@ function openClockConfirmation(workerId) {
     badge.style.background = '#fee2e2';
     badge.style.color = '#b91c1c';
     title.textContent = '¿Estás seguro de que quieres salir?';
-    desc.textContent = `${worker.name} (${worker.role}) — Vas a registrar tu hora de salida.`;
-    confirmBtn.textContent = 'Sí, Fichar Salida';
+    desc.textContent = `${worker.name} (${worker.role}) — Pulsa aceptar para registrar tu salida.`;
+    confirmBtn.textContent = '✓ Aceptar y Fichar Salida';
   } else {
     badge.textContent = 'ENTRADA';
     badge.style.background = '#d1fae5';
     badge.style.color = '#065f46';
     title.textContent = '¿Estás seguro de que quieres entrar?';
-    desc.textContent = `${worker.name} (${worker.role}) — Vas a registrar tu hora de entrada.`;
-    confirmBtn.textContent = 'Sí, Fichar Entrada';
+    desc.textContent = `${worker.name} (${worker.role}) — Pulsa aceptar para registrar tu entrada.`;
+    confirmBtn.textContent = '✓ Aceptar y Fichar Entrada';
   }
 
   timeBox.textContent = nowTime;
