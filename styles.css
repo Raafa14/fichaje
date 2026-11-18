@@ -2161,7 +2161,7 @@ input:focus, select:focus {
 }
 
 /* =============================================================================
-   EDITOR UNIFICADO DE ASIGNACIÓN (1 SOLO APARTADO DIRECTO Y SIMPLE)
+   EDITOR UNIFICADO DE ASIGNACIÓN (PLANTILLA + LISTA SEPARADA)
    ============================================================================= */
 
 .zones-editor-pane {
@@ -2169,16 +2169,11 @@ input:focus, select:focus {
 }
 
 .unified-editor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  margin-bottom: 14px;
 }
 
 .editor-header-info h4 {
-  font-size: 15.5px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--primary);
   margin: 0;
@@ -2188,6 +2183,217 @@ input:focus, select:focus {
   font-size: 12.5px;
   color: var(--text-muted);
   margin: 3px 0 0 0;
+}
+
+/* -----------------------------------------------------------------------------
+   PLANTILLA DE AÑADIR CAMARERO (TARJETA FORMULARIO)
+   ----------------------------------------------------------------------------- */
+.new-assignment-form-card {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.form-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 10px;
+}
+
+.form-card-title-wrap h4 {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-card-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 3px 0 0 0;
+}
+
+.form-card-badge {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.form-row-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.form-hours-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.hours-block-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* Selector de Horarios con Desplegables (Desde y Hasta) */
+.time-range-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.time-select-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-select-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.input-select-time {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--primary);
+  background: #ffffff;
+  cursor: pointer;
+  min-width: 90px;
+}
+
+.input-select-time:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+}
+
+.hours-picker-partido {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.partido-time-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.partido-col-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+}
+
+/* Footer de la plantilla con botón en esquina inferior derecha */
+.form-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed #e2e8f0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.form-submit-wrap {
+  margin-left: auto; /* Empuja el botón a la esquina inferior derecha */
+}
+
+.btn-add-camarero {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 9px 20px;
+  border-radius: 9px;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-add-camarero:hover {
+  background: #d97706 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   SEPARACIÓN VISUAL ENTRE PLANTILLA Y CAMAREROS AÑADIDOS
+   ----------------------------------------------------------------------------- */
+.zones-form-divider {
+  border: none;
+  border-top: 2px dashed #cbd5e1;
+  margin: 26px 0 20px 0;
+}
+
+.assigned-workers-section {
+  margin-top: 8px;
+}
+
+.assigned-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.assigned-header-info h4 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assigned-counter-badge {
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.assigned-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
 }
 
 .assignments-cards-list {
@@ -2207,11 +2413,20 @@ input:focus, select:focus {
 
 .empty-assignments-notice p {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
 }
 
+.empty-hint {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* -----------------------------------------------------------------------------
+   TARJETAS DE CAMAREROS YA AÑADIDOS
+   ----------------------------------------------------------------------------- */
 .assignment-card-item {
   background: #ffffff;
   border: 1.5px solid var(--border);
@@ -2240,6 +2455,85 @@ input:focus, select:focus {
   font-weight: 800;
   padding: 5px 8px;
   border-radius: 6px;
+}
+
+.assigned-worker-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 180px;
+}
+
+.assigned-worker-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.extra-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.zone-field-compact,
+.shift-type-field-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zone-field-compact label,
+.shift-type-field-compact label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.input-select-zone-sm {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary);
+  background: #fbfcfd;
+}
+
+.shift-type-pills-sm {
+  padding: 2px;
+  gap: 2px;
+}
+
+.shift-type-pills-sm .type-pill {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.btn-remove-card {
+  margin-left: auto;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-remove-card:hover {
+  background: #dc2626;
+  color: #ffffff;
 }
 
 .field-item {
@@ -2327,28 +2621,6 @@ input:focus, select:focus {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.btn-remove-card {
-  margin-left: auto;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 13px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-remove-card:hover {
-  background: #dc2626;
-  color: #ffffff;
-}
-
 .assignment-hours-block {
   margin-top: 12px;
   padding-top: 10px;
@@ -2361,39 +2633,10 @@ input:focus, select:focus {
   gap: 6px;
 }
 
-.hours-input-wrap label,
-.partido-col label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary);
-}
-
 .hours-row-partido {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-
-.partido-col {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.input-hours {
-  width: 100%;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
-  background: #ffffff;
-}
-
-.input-hours:focus {
-  outline: none;
-  border-color: var(--accent);
 }
 
 .hours-quick-presets {

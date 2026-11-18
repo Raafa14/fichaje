@@ -26,6 +26,48 @@ const TIME_PRESETS_PARTIDO = {
   noche: ['20:00 a 00:30', '20:30 a 01:00', '19:30 a 00:00']
 };
 
+// Opciones estándar para selección de horas (cada 30 min)
+const TIME_SELECT_OPTIONS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+  '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30',
+  '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00'
+];
+
+function buildTimeSelectOptions(selectedVal) {
+  let opts = [...TIME_SELECT_OPTIONS];
+  if (selectedVal && !opts.includes(selectedVal)) {
+    opts = [selectedVal, ...opts];
+  }
+  return opts.map((t) => `<option value="${t}" ${t === selectedVal ? 'selected' : ''}>${t}</option>`).join('');
+}
+
+function parseHoursRange(hoursStr, defaultStart = '14:00', defaultEnd = '00:00') {
+  if (!hoursStr || typeof hoursStr !== 'string') return { start: defaultStart, end: defaultEnd };
+  const m = hoursStr.match(/(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/);
+  if (m) {
+    const s = m[1].length === 4 ? '0' + m[1] : m[1];
+    const e = m[2].length === 4 ? '0' + m[2] : m[2];
+    return { start: s, end: e };
+  }
+  return { start: defaultStart, end: defaultEnd };
+}
+
+let newAssignmentForm = {
+  workerName: '',
+  isCustom: false,
+  customWorkerName: '',
+  zone: 'terraza',
+  shiftType: 'seguido',
+  timeStart: '14:00',
+  timeEnd: '00:00',
+  partidoMedStart: '13:00',
+  partidoMedEnd: '16:30',
+  partidoNocStart: '20:00',
+  partidoNocEnd: '00:30'
+};
+
 let selectedZonesDate = new Date();
 let activeZonesView = 'editor'; // 'editor' | 'preview'
 let currentDailyAssignments = [];
@@ -281,94 +323,281 @@ function renderUnifiedZonesEditor() {
 
   const totalWorkers = currentDailyAssignments.length;
 
+  // Si el formulario no tiene camarero seleccionado aún, asignar el primero disponible
+  if (!newAssignmentForm.workerName && currentWorkers && currentWorkers.length > 0) {
+    const unusedWorker = currentWorkers.find((w) => !currentDailyAssignments.some((a) => a.workerName === w.name));
+    newAssignmentForm.workerName = unusedWorker ? unusedWorker.name : currentWorkers[0].name;
+  }
+
+  // Previsualización de clasificación en la plantilla
+  const previewAssign = {
+    workerName: newAssignmentForm.isCustom ? (newAssignmentForm.customWorkerName || 'Camarero') : (newAssignmentForm.workerName || 'Camarero'),
+    zone: newAssignmentForm.zone,
+    shiftType: newAssignmentForm.shiftType,
+    hours: `${newAssignmentForm.timeStart} a ${newAssignmentForm.timeEnd}`,
+    hoursMediodia: `${newAssignmentForm.partidoMedStart} a ${newAssignmentForm.partidoMedEnd}`,
+    hoursNoche: `${newAssignmentForm.partidoNocStart} a ${newAssignmentForm.partidoNocEnd}`
+  };
+  const previewClassified = classifyAssignmentToShifts(previewAssign);
+  const isFormPartido = newAssignmentForm.shiftType === 'partido';
+
   let html = `
+    <!-- Encabezado general (sin botón de añadir aquí, como se ha pedido) -->
     <div class="unified-editor-header">
       <div class="editor-header-info">
-        <h4>Lista de Camareros y Horarios del Día</h4>
-        <p>Elige al camarero, su zona y su horario (seguido o partido). El sistema lo colocará <strong>automáticamente en Mediodía y Noche</strong>.</p>
+        <h4>Asignación y Planificación de Zonas</h4>
+        <p>Configura a los camareros y sus horarios. El sistema los colocará <strong>automáticamente en Mediodía y Noche</strong>.</p>
       </div>
-      <button type="button" class="btn btn-accent btn-sm" onclick="handleAddNewAssignmentRow()">
-        + Añadir Camarero al Cuadrante
-      </button>
     </div>
 
-    <div class="assignments-cards-list" id="assignments-cards-list">
+    <!-- ====================================================================
+         PLANTILLA DE AÑADIR CAMARERO (TARJETA FORMULARIO)
+         ==================================================================== -->
+    <div class="new-assignment-form-card">
+      <div class="form-card-header">
+        <div class="form-card-title-wrap">
+          <h4>📋 Plantilla: Asignar Nuevo Camarero</h4>
+          <p class="form-card-hint">Selecciona el camarero, su puesto y su horario con desplegables (sin tener que escribir nada).</p>
+        </div>
+        <span class="form-card-badge">Nueva Asignación</span>
+      </div>
+
+      <div class="form-card-body">
+        <!-- Fila 1: Camarero, Zona y Tipo de Turno -->
+        <div class="form-row-grid">
+          <!-- Selector de Camarero -->
+          <div class="field-item worker-field">
+            <label>Camarero/a:</label>
+            <select class="input-select-worker" onchange="handleNewFormChange('workerName', this.value)">
+              <option value="">-- Seleccionar camarero --</option>
+              ${(currentWorkers || []).map((w) => `<option value="${w.name}" ${newAssignmentForm.workerName === w.name ? 'selected' : ''}>${w.name} (${w.role})</option>`).join('')}
+              <option value="__custom__" ${newAssignmentForm.isCustom ? 'selected' : ''}>+ Escribir otro nombre...</option>
+            </select>
+            ${newAssignmentForm.isCustom ? `
+              <input type="text" class="input-worker-custom" placeholder="Nombre del trabajador/extra" value="${newAssignmentForm.customWorkerName || ''}" oninput="handleNewFormChange('customWorkerName', this.value)">
+            ` : ''}
+          </div>
+
+          <!-- Selector de Zona (Salon, Terraza, Calle) -->
+          <div class="field-item zone-field">
+            <label>Zona / Puesto:</label>
+            <select class="input-select-zone" onchange="handleNewFormChange('zone', this.value)">
+              ${AVAILABLE_ZONES.map((z) => `<option value="${z.id}" ${newAssignmentForm.zone === z.id ? 'selected' : ''}>${z.icon} ${z.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Tipo de Turno (Seguido / Partido) -->
+          <div class="field-item shift-type-field">
+            <label>Tipo de Turno:</label>
+            <div class="shift-type-pills">
+              <button type="button" class="type-pill ${!isFormPartido ? 'active' : ''}" onclick="handleNewFormChange('shiftType', 'seguido')">
+                Turno Seguido
+              </button>
+              <button type="button" class="type-pill ${isFormPartido ? 'active' : ''}" onclick="handleNewFormChange('shiftType', 'partido')">
+                Turno Partido
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila 2: Selección de Horarios mediante desplegables -->
+        <div class="form-hours-block">
+  `;
+
+  if (!isFormPartido) {
+    html += `
+      <div class="hours-picker-seguido">
+        <label class="hours-block-label">Seleccionar Horario Completo:</label>
+        <div class="time-range-picker">
+          <div class="time-select-group">
+            <span class="time-select-label">Desde:</span>
+            <select class="input-select-time" onchange="handleNewFormChange('timeStart', this.value)">
+              ${buildTimeSelectOptions(newAssignmentForm.timeStart)}
+            </select>
+          </div>
+          <div class="time-select-group">
+            <span class="time-select-label">Hasta:</span>
+            <select class="input-select-time" onchange="handleNewFormChange('timeEnd', this.value)">
+              ${buildTimeSelectOptions(newAssignmentForm.timeEnd)}
+            </select>
+          </div>
+        </div>
+        <div class="hours-quick-presets">
+          <span>Atajos de 1 clic:</span>
+          ${TIME_PRESETS_SEGUIDO.map((p) => `
+            <button type="button" class="btn-preset-chip" onclick="handleApplyPresetToNewForm('seguido', '${p}')">${p}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="hours-picker-partido">
+        <div class="partido-time-col">
+          <label class="hours-block-label">☀️ Turno Mediodía (Comida):</label>
+          <div class="time-range-picker">
+            <div class="time-select-group">
+              <span class="time-select-label">Desde:</span>
+              <select class="input-select-time" onchange="handleNewFormChange('partidoMedStart', this.value)">
+                ${buildTimeSelectOptions(newAssignmentForm.partidoMedStart)}
+              </select>
+            </div>
+            <div class="time-select-group">
+              <span class="time-select-label">Hasta:</span>
+              <select class="input-select-time" onchange="handleNewFormChange('partidoMedEnd', this.value)">
+                ${buildTimeSelectOptions(newAssignmentForm.partidoMedEnd)}
+              </select>
+            </div>
+          </div>
+          <div class="hours-quick-presets">
+            ${TIME_PRESETS_PARTIDO.mediodia.map((p) => `
+              <button type="button" class="btn-preset-chip" onclick="handleApplyPresetToNewForm('partidoMed', '${p}')">${p}</button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="partido-time-col">
+          <label class="hours-block-label">🌙 Turno Noche (Cena):</label>
+          <div class="time-range-picker">
+            <div class="time-select-group">
+              <span class="time-select-label">Desde:</span>
+              <select class="input-select-time" onchange="handleNewFormChange('partidoNocStart', this.value)">
+                ${buildTimeSelectOptions(newAssignmentForm.partidoNocStart)}
+              </select>
+            </div>
+            <div class="time-select-group">
+              <span class="time-select-label">Hasta:</span>
+              <select class="input-select-time" onchange="handleNewFormChange('partidoNocEnd', this.value)">
+                ${buildTimeSelectOptions(newAssignmentForm.partidoNocEnd)}
+              </select>
+            </div>
+          </div>
+          <div class="hours-quick-presets">
+            ${TIME_PRESETS_PARTIDO.noche.map((p) => `
+              <button type="button" class="btn-preset-chip" onclick="handleApplyPresetToNewForm('partidoNoc', '${p}')">${p}</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  html += `
+        </div>
+
+        <!-- Fila 3: Distribución automática y Botón Añadir en la ESQUINA INFERIOR DERECHA -->
+        <div class="form-card-footer">
+          <div class="auto-classification-tag">
+            <span class="tag-icon">⚡</span>
+            <span>Distribución en el cuadrante: <strong>${previewClassified.summaryBadge}</strong></span>
+          </div>
+
+          <div class="form-submit-wrap">
+            <button type="button" class="btn btn-accent btn-add-camarero" onclick="handleAddAssignmentFromForm()">
+              + Añadir Camarero al Cuadrante
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEPARACIÓN VISUAL ENTRE LA PLANTILLA Y LOS CAMAREROS AÑADIDOS -->
+    <div class="zones-form-divider"></div>
+
+    <!-- ====================================================================
+         LISTA DE CAMAREROS AÑADIDOS (SEPARADA DE LA PLANTILLA)
+         ==================================================================== -->
+    <div class="assigned-workers-section">
+      <div class="assigned-section-header">
+        <div class="assigned-header-info">
+          <h4>👥 Camareros Añadidos al Cuadrante <span class="assigned-counter-badge">${totalWorkers}</span></h4>
+          <p class="assigned-subtitle">Personal confirmado en el cuadrante de hoy para la hoja y el PDF de WhatsApp.</p>
+        </div>
+      </div>
+
+      <div class="assignments-cards-list" id="assignments-cards-list">
   `;
 
   if (totalWorkers === 0) {
     html += `
       <div class="empty-assignments-notice">
-        <p>No hay camareros asignados en este día todavía.</p>
-        <button type="button" class="btn btn-outline btn-sm" onclick="handleAddNewAssignmentRow()">
-          + Añadir Primer Camarero
-        </button>
+        <p>Aún no has añadido ningún camarero al cuadrante de hoy.</p>
+        <span class="empty-hint">Utiliza la plantilla de arriba para configurar el primer camarero y pulsa <strong>"+ Añadir Camarero al Cuadrante"</strong> en la esquina inferior derecha.</span>
       </div>
     `;
   } else {
     currentDailyAssignments.forEach((assign, index) => {
-      const isPartido = assign.shiftType === 'partido';
+      const isCardPartido = assign.shiftType === 'partido';
       const classified = classifyAssignmentToShifts(assign);
+
+      // Extraer rango de horas existente para los desplegables
+      const rangeSeguido = parseHoursRange(assign.hours, '14:00', '00:00');
+      const rangeMed = parseHoursRange(assign.hoursMediodia, '13:00', '16:30');
+      const rangeNoc = parseHoursRange(assign.hoursNoche, '20:00', '00:30');
 
       html += `
         <div class="assignment-card-item">
           <div class="assignment-card-top">
             <span class="assignment-number-badge">#${index + 1}</span>
-            
-            <!-- Selector de Camarero -->
-            <div class="field-item worker-field">
-              <label>Camarero/a:</label>
-              <select class="input-select-worker" onchange="handleAssignmentChange(${index}, 'workerName', this.value)">
-                <option value="">-- Seleccionar camarero --</option>
-                ${(currentWorkers || []).map((w) => `<option value="${w.name}" ${assign.workerName === w.name ? 'selected' : ''}>${w.name} (${w.role})</option>`).join('')}
-                <option value="__custom__" ${assign.isCustom ? 'selected' : ''}>+ Escribir otro nombre...</option>
-              </select>
-              ${assign.isCustom ? `
-                <input type="text" class="input-worker-custom" placeholder="Nombre del trabajador/extra" value="${assign.workerName || ''}" onchange="handleAssignmentChange(${index}, 'customWorkerName', this.value)">
-              ` : ''}
+
+            <!-- Nombre de camarero -->
+            <div class="assigned-worker-badge-wrap">
+              <strong class="assigned-worker-name">${assign.workerName || 'Sin Nombre'}</strong>
+              ${assign.isCustom ? '<span class="extra-badge">Extra</span>' : ''}
             </div>
 
-            <!-- Selector de Zona (Salon, Terraza, Calle) -->
-            <div class="field-item zone-field">
-              <label>Zona / Puesto:</label>
-              <select class="input-select-zone" onchange="handleAssignmentChange(${index}, 'zone', this.value)">
+            <!-- Zona / Puesto -->
+            <div class="field-item zone-field-compact">
+              <label>Zona:</label>
+              <select class="input-select-zone-sm" onchange="handleExistingCardChange(${index}, 'zone', this.value)">
                 ${AVAILABLE_ZONES.map((z) => `<option value="${z.id}" ${assign.zone === z.id ? 'selected' : ''}>${z.icon} ${z.name}</option>`).join('')}
               </select>
             </div>
 
-            <!-- Tipo de Turno (Seguido / Partido) -->
-            <div class="field-item shift-type-field">
-              <label>Tipo de Turno:</label>
-              <div class="shift-type-pills">
-                <button type="button" class="type-pill ${!isPartido ? 'active' : ''}" onclick="handleAssignmentChange(${index}, 'shiftType', 'seguido')">
-                  Turno Seguido
+            <!-- Tipo de Turno -->
+            <div class="field-item shift-type-field-compact">
+              <label>Turno:</label>
+              <div class="shift-type-pills shift-type-pills-sm">
+                <button type="button" class="type-pill ${!isCardPartido ? 'active' : ''}" onclick="handleExistingCardChange(${index}, 'shiftType', 'seguido')">
+                  Seguido
                 </button>
-                <button type="button" class="type-pill ${isPartido ? 'active' : ''}" onclick="handleAssignmentChange(${index}, 'shiftType', 'partido')">
-                  Turno Partido
+                <button type="button" class="type-pill ${isCardPartido ? 'active' : ''}" onclick="handleExistingCardChange(${index}, 'shiftType', 'partido')">
+                  Partido
                 </button>
               </div>
             </div>
 
-            <!-- Botón Eliminar fila -->
+            <!-- Botón Eliminar fila en la esquina superior derecha -->
             <button type="button" class="btn-remove-card" onclick="handleRemoveAssignmentRow(${index})" title="Quitar este camarero del cuadrante">
-              ✕
+              ✕ Quitar
             </button>
           </div>
 
-          <!-- Bloque de Horarios -->
+          <!-- Selección de Horas en la tarjeta del camarero ya añadido -->
           <div class="assignment-hours-block">
       `;
 
-      if (!isPartido) {
+      if (!isCardPartido) {
         html += `
           <div class="hours-row-seguido">
-            <div class="hours-input-wrap">
-              <label>Horario completo (ej: 14:00 a 00:00 o 12:00 a 18:00):</label>
-              <input type="text" class="input-hours" placeholder="Ej: 14:00 a 00:00" value="${assign.hours || ''}" onchange="handleAssignmentChange(${index}, 'hours', this.value)">
+            <div class="time-range-picker">
+              <div class="time-select-group">
+                <span class="time-select-label">Desde:</span>
+                <select class="input-select-time" onchange="handleExistingCardChange(${index}, 'timeStart', this.value)">
+                  ${buildTimeSelectOptions(rangeSeguido.start)}
+                </select>
+              </div>
+              <div class="time-select-group">
+                <span class="time-select-label">Hasta:</span>
+                <select class="input-select-time" onchange="handleExistingCardChange(${index}, 'timeEnd', this.value)">
+                  ${buildTimeSelectOptions(rangeSeguido.end)}
+                </select>
+              </div>
             </div>
             <div class="hours-quick-presets">
-              <span>Atajos de 1 clic:</span>
+              <span>Atajos:</span>
               ${TIME_PRESETS_SEGUIDO.map((p) => `
-                <button type="button" class="btn-preset-chip" onclick="handleApplyHoursPreset(${index}, 'hours', '${p}')">${p}</button>
+                <button type="button" class="btn-preset-chip" onclick="handleApplyPresetToCard(${index}, 'seguido', '${p}')">${p}</button>
               `).join('')}
             </div>
           </div>
@@ -376,21 +605,48 @@ function renderUnifiedZonesEditor() {
       } else {
         html += `
           <div class="hours-row-partido">
-            <div class="partido-col">
-              <label>☀️ Horario Mediodía (Comida):</label>
-              <input type="text" class="input-hours" placeholder="13:00 a 16:30" value="${assign.hoursMediodia || '13:00 a 16:30'}" onchange="handleAssignmentChange(${index}, 'hoursMediodia', this.value)">
+            <div class="partido-time-col">
+              <span class="partido-col-label">☀️ Mediodía:</span>
+              <div class="time-range-picker">
+                <div class="time-select-group">
+                  <span class="time-select-label">Desde:</span>
+                  <select class="input-select-time" onchange="handleExistingCardChange(${index}, 'medStart', this.value)">
+                    ${buildTimeSelectOptions(rangeMed.start)}
+                  </select>
+                </div>
+                <div class="time-select-group">
+                  <span class="time-select-label">Hasta:</span>
+                  <select class="input-select-time" onchange="handleExistingCardChange(${index}, 'medEnd', this.value)">
+                    ${buildTimeSelectOptions(rangeMed.end)}
+                  </select>
+                </div>
+              </div>
               <div class="hours-quick-presets">
                 ${TIME_PRESETS_PARTIDO.mediodia.map((p) => `
-                  <button type="button" class="btn-preset-chip" onclick="handleApplyHoursPreset(${index}, 'hoursMediodia', '${p}')">${p}</button>
+                  <button type="button" class="btn-preset-chip" onclick="handleApplyPresetToCard(${index}, 'partidoMed', '${p}')">${p}</button>
                 `).join('')}
               </div>
             </div>
-            <div class="partido-col">
-              <label>🌙 Horario Noche (Cena):</label>
-              <input type="text" class="input-hours" placeholder="20:00 a 00:30" value="${assign.hoursNoche || '20:00 a 00:30'}" onchange="handleAssignmentChange(${index}, 'hoursNoche', this.value)">
+
+            <div class="partido-time-col">
+              <span class="partido-col-label">🌙 Noche:</span>
+              <div class="time-range-picker">
+                <div class="time-select-group">
+                  <span class="time-select-label">Desde:</span>
+                  <select class="input-select-time" onchange="handleExistingCardChange(${index}, 'nocStart', this.value)">
+                    ${buildTimeSelectOptions(rangeNoc.start)}
+                  </select>
+                </div>
+                <div class="time-select-group">
+                  <span class="time-select-label">Hasta:</span>
+                  <select class="input-select-time" onchange="handleExistingCardChange(${index}, 'nocEnd', this.value)">
+                    ${buildTimeSelectOptions(rangeNoc.end)}
+                  </select>
+                </div>
+              </div>
               <div class="hours-quick-presets">
                 ${TIME_PRESETS_PARTIDO.noche.map((p) => `
-                  <button type="button" class="btn-preset-chip" onclick="handleApplyHoursPreset(${index}, 'hoursNoche', '${p}')">${p}</button>
+                  <button type="button" class="btn-preset-chip" onclick="handleApplyPresetToCard(${index}, 'partidoNoc', '${p}')">${p}</button>
                 `).join('')}
               </div>
             </div>
@@ -399,11 +655,9 @@ function renderUnifiedZonesEditor() {
       }
 
       html += `
-            <!-- Indicador automático de reparto -->
             <div class="auto-classification-tag">
               <span class="tag-icon">⚡</span>
-              <span>Distribución en el cuadrante:</span>
-              <strong>${classified.summaryBadge}</strong>
+              <span>Aparece en: <strong>${classified.summaryBadge}</strong></span>
             </div>
           </div>
         </div>
@@ -412,89 +666,164 @@ function renderUnifiedZonesEditor() {
   }
 
   html += `
-    </div>
-    <div class="unified-editor-bottom">
-      <button type="button" class="btn btn-outline btn-full-add" onclick="handleAddNewAssignmentRow()">
-        + Añadir Otro Camarero al Cuadrante
-      </button>
+      </div>
     </div>
   `;
 
   container.innerHTML = html;
 }
 
-// Añade una nueva fila al cuadrante
-async function handleAddNewAssignmentRow() {
-  const availableWorker = (currentWorkers || []).find(
-    (w) => !currentDailyAssignments.some((a) => a.workerName === w.name)
-  );
-  const defaultName = availableWorker ? availableWorker.name : ((currentWorkers && currentWorkers[0]) ? currentWorkers[0].name : '');
+// Cambia campos en la plantilla de añadir camarero
+function handleNewFormChange(field, val) {
+  if (field === 'workerName') {
+    if (val === '__custom__') {
+      newAssignmentForm.isCustom = true;
+    } else {
+      newAssignmentForm.isCustom = false;
+      newAssignmentForm.workerName = val;
+    }
+  } else if (field === 'customWorkerName') {
+    newAssignmentForm.customWorkerName = val;
+  } else if (field === 'zone') {
+    newAssignmentForm.zone = val;
+  } else if (field === 'shiftType') {
+    newAssignmentForm.shiftType = val;
+  } else if (field === 'timeStart') {
+    newAssignmentForm.timeStart = val;
+  } else if (field === 'timeEnd') {
+    newAssignmentForm.timeEnd = val;
+  } else if (field === 'partidoMedStart') {
+    newAssignmentForm.partidoMedStart = val;
+  } else if (field === 'partidoMedEnd') {
+    newAssignmentForm.partidoMedEnd = val;
+  } else if (field === 'partidoNocStart') {
+    newAssignmentForm.partidoNocStart = val;
+  } else if (field === 'partidoNocEnd') {
+    newAssignmentForm.partidoNocEnd = val;
+  }
+  renderUnifiedZonesEditor();
+}
+
+// Aplica preset rápido a la plantilla de añadir
+function handleApplyPresetToNewForm(fieldOrType, presetStr) {
+  if (fieldOrType === 'seguido') {
+    const range = parseHoursRange(presetStr, '14:00', '00:00');
+    newAssignmentForm.timeStart = range.start;
+    newAssignmentForm.timeEnd = range.end;
+  } else if (fieldOrType === 'partidoMed') {
+    const range = parseHoursRange(presetStr, '13:00', '16:30');
+    newAssignmentForm.partidoMedStart = range.start;
+    newAssignmentForm.partidoMedEnd = range.end;
+  } else if (fieldOrType === 'partidoNoc') {
+    const range = parseHoursRange(presetStr, '20:00', '00:30');
+    newAssignmentForm.partidoNocStart = range.start;
+    newAssignmentForm.partidoNocEnd = range.end;
+  }
+  renderUnifiedZonesEditor();
+}
+
+// Añade el camarero configurado en la plantilla al cuadrante
+async function handleAddAssignmentFromForm() {
+  const nameToUse = newAssignmentForm.isCustom
+    ? (newAssignmentForm.customWorkerName || '').trim()
+    : newAssignmentForm.workerName;
+
+  if (!nameToUse) {
+    alert('Por favor, selecciona o escribe el nombre del camarero.');
+    return;
+  }
+
+  const hours = newAssignmentForm.shiftType === 'partido'
+    ? ''
+    : `${newAssignmentForm.timeStart} a ${newAssignmentForm.timeEnd}`;
+  const hoursMed = `${newAssignmentForm.partidoMedStart} a ${newAssignmentForm.partidoMedEnd}`;
+  const hoursNoc = `${newAssignmentForm.partidoNocStart} a ${newAssignmentForm.partidoNocEnd}`;
 
   currentDailyAssignments.push({
     id: 'a_' + Date.now(),
-    workerName: defaultName,
-    zone: 'terraza',
-    shiftType: 'seguido',
-    hours: '14:00 a 00:00',
-    hoursMediodia: '13:00 a 16:30',
-    hoursNoche: '20:00 a 00:30'
+    workerName: nameToUse,
+    isCustom: newAssignmentForm.isCustom,
+    zone: newAssignmentForm.zone,
+    shiftType: newAssignmentForm.shiftType,
+    hours: hours,
+    hoursMediodia: hoursMed,
+    hoursNoche: hoursNoc
   });
 
-  renderUnifiedZonesEditor();
+  // Seleccionar automáticamente al siguiente camarero no añadido aún
+  const nextWorker = (currentWorkers || []).find((w) => !currentDailyAssignments.some((a) => a.workerName === w.name));
+  if (nextWorker) {
+    newAssignmentForm.workerName = nextWorker.name;
+    newAssignmentForm.isCustom = false;
+    newAssignmentForm.customWorkerName = '';
+  } else {
+    newAssignmentForm.customWorkerName = '';
+  }
+
   await autoSaveCurrentDailyAssignments();
+  renderUnifiedZonesEditor();
+  showToast(`"${nameToUse}" añadido al cuadrante.`);
 }
 
-// Modifica campos de una asignación
-async function handleAssignmentChange(index, field, value) {
+// Modifica campos de una tarjeta de camarero ya añadido
+async function handleExistingCardChange(index, field, val) {
   const item = currentDailyAssignments[index];
   if (!item) return;
 
-  if (field === 'workerName') {
-    if (value === '__custom__') {
-      item.isCustom = true;
-      item.workerName = '';
-    } else {
-      item.isCustom = false;
-      item.workerName = value;
-    }
-  } else if (field === 'customWorkerName') {
-    item.workerName = value.trim();
-  } else if (field === 'zone') {
-    item.zone = value;
+  if (field === 'zone') {
+    item.zone = val;
   } else if (field === 'shiftType') {
-    item.shiftType = value;
-    if (value === 'partido') {
+    item.shiftType = val;
+    if (val === 'partido') {
       if (!item.hoursMediodia) item.hoursMediodia = '13:00 a 16:30';
       if (!item.hoursNoche) item.hoursNoche = '20:00 a 00:30';
     } else {
       if (!item.hours) item.hours = '14:00 a 00:00';
     }
-  } else if (field === 'hours') {
-    item.hours = value.trim();
-  } else if (field === 'hoursMediodia') {
-    item.hoursMediodia = value.trim();
-  } else if (field === 'hoursNoche') {
-    item.hoursNoche = value.trim();
+  } else if (field === 'timeStart' || field === 'timeEnd') {
+    const range = parseHoursRange(item.hours, '14:00', '00:00');
+    if (field === 'timeStart') range.start = val;
+    if (field === 'timeEnd') range.end = val;
+    item.hours = `${range.start} a ${range.end}`;
+  } else if (field === 'medStart' || field === 'medEnd') {
+    const range = parseHoursRange(item.hoursMediodia, '13:00', '16:30');
+    if (field === 'medStart') range.start = val;
+    if (field === 'medEnd') range.end = val;
+    item.hoursMediodia = `${range.start} a ${range.end}`;
+  } else if (field === 'nocStart' || field === 'nocEnd') {
+    const range = parseHoursRange(item.hoursNoche, '20:00', '00:30');
+    if (field === 'nocStart') range.start = val;
+    if (field === 'nocEnd') range.end = val;
+    item.hoursNoche = `${range.start} a ${range.end}`;
   }
 
-  renderUnifiedZonesEditor();
   await autoSaveCurrentDailyAssignments();
+  renderUnifiedZonesEditor();
 }
 
-// Aplica preset rápido de horas
-async function handleApplyHoursPreset(index, field, preset) {
+// Aplica preset rápido a una tarjeta de camarero ya añadido
+async function handleApplyPresetToCard(index, fieldOrType, presetStr) {
   const item = currentDailyAssignments[index];
   if (!item) return;
-  item[field] = preset;
-  renderUnifiedZonesEditor();
+  if (fieldOrType === 'seguido') {
+    item.hours = presetStr;
+  } else if (fieldOrType === 'partidoMed') {
+    item.hoursMediodia = presetStr;
+  } else if (fieldOrType === 'partidoNoc') {
+    item.hoursNoche = presetStr;
+  }
   await autoSaveCurrentDailyAssignments();
+  renderUnifiedZonesEditor();
 }
 
-// Elimina una fila del cuadrante
+// Quita un camarero del cuadrante
 async function handleRemoveAssignmentRow(index) {
-  currentDailyAssignments.splice(index, 1);
-  renderUnifiedZonesEditor();
+  const removed = currentDailyAssignments.splice(index, 1);
   await autoSaveCurrentDailyAssignments();
+  renderUnifiedZonesEditor();
+  if (removed && removed[0]) {
+    showToast(`"${removed[0].workerName}" quitado del cuadrante.`);
+  }
 }
 
 // Guardado automático en Firebase / LocalStorage
